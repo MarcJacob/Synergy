@@ -17,6 +17,7 @@ union ColorRGBA
 enum class DrawCallType
 {
 	EMPTY, // Empty draw call that wasn't initialized from 0ed memory.
+	LINE, // Draw pixels in a straight line from origin to specific destination coordinates with a given width.
 	RECTANGLE, // Draw pixels with a corner origin and a specific width and height.
 	ELLIPSE, // Draw pixels in an ellipse with a specific origin and radius.
 	BITMAP, // Same as rectangle, but stretch / shrink a bitmap of pixels to fit inside the rectangle.
@@ -35,6 +36,19 @@ struct DrawCall
 	uint16_t angleDeg;
 
 	ColorRGBA color;
+};
+
+/*
+	Data for a Line type draw call. Origin coordinates should be interpreted as the start point of the line.
+	Angle should be interpreted as Origin-to-Destination axis along cosinus, and left normal of that axis along sinus. 
+*/
+struct LineDrawCallData : public DrawCall
+{
+	// Destination point of the line.
+	uint16_t destX, destY;
+
+	// Width of the line along its main axis in pixels.
+	uint16_t width;
 };
 
 /*
@@ -76,6 +90,8 @@ size_t GetDrawCallSize(DrawCallType CallType)
 {
 	switch (CallType)
 	{
+	case(DrawCallType::LINE):
+		return sizeof(LineDrawCallData);
 	case(DrawCallType::RECTANGLE):
 		return sizeof(RectangleDrawCallData);
 	case(DrawCallType::ELLIPSE):
@@ -167,6 +183,7 @@ struct ClientFrameDrawCallBuffer
 		}
 
 		CursorPosition = 0;
+		return true;
 	}
 
 	/*
