@@ -3,7 +3,7 @@
 #ifndef SYNERGY_CLIENT_INCLUDED
 #define SYNERGY_CLIENT_INCLUDED
 
-#include <SynergyCore.h>
+#include <Core/SynergyCore.h>
 
 #include <stdint.h>
 

@@ -1,5 +1,4 @@
 #include "SynergyClient.h"
-#include "SynergyCore.h"
 
 #include "Public/SynergyClientDrawBuffer.h"
 
