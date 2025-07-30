@@ -19,7 +19,7 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 
 DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
 {
-	std::cout << "Running client frame." << FrameData.FrameNumber << "\n\tFrame Time = " << FrameData.FrameTime << "\n";
+	std::cout << "Running client frame " << FrameData.FrameNumber << "\n\tFrame Time = " << FrameData.FrameTime << "\n";
 }
 
 DLL_EXPORT void ShutdownClient(ClientContext& Context)

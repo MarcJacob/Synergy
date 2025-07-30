@@ -10,7 +10,7 @@ struct ClientMemoryManager
 {
 	uint8_t* MemoryPtr = nullptr;
 	void* (*Allocate)(size_t Size) = nullptr;
-	void* (*Free)(void* Ptr) = nullptr;
+	void (*Free)(void* Ptr) = nullptr;
 };
 
 // Collection of platform functions that can be called from Client code.
