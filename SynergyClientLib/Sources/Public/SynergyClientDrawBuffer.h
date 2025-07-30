@@ -1,5 +1,8 @@
 #include <iostream>
 
+#ifndef SYNERGYCLIENT_DRAWBUFFER_INCLUDED
+#define SYNERGYCLIENT_DRAWBUFFER_INCLUDED
+
 union ColorRGBA
 {
 	struct
@@ -86,7 +89,7 @@ struct BitmapDrawCallData : public RectangleDrawCallData
 	Returns the expected actual size of a draw call data structure.
 	Returns 0 if the call is invalid for any reason.
 */
-size_t GetDrawCallSize(DrawCallType CallType)
+inline size_t GetDrawCallSize(DrawCallType CallType)
 {
 	switch (CallType)
 	{
@@ -230,3 +233,5 @@ struct ClientFrameDrawCallBuffer
 	// When filling the buffer in, is the write cursor. When reading the buffer, is the read cursor.
 	size_t CursorPosition = 0;
 };
+
+#endif
