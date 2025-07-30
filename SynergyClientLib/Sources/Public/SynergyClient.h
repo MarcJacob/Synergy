@@ -3,78 +3,7 @@
 #ifndef SYNERGY_CLIENT_INCLUDED
 #define SYNERGY_CLIENT_INCLUDED
 
-#include <cstdint.h>
-
-union ColorRGBA
-{
-	struct
-	{
-		uint8_t r, g, b, a;
-	};
-
-	uint32_t full;
-};
-
-/*
-	Type of a draw call. Tells the render layer what kind of drawing to do, and what function to call to retrieve the correct
-	data structure from the draw call memory.
-*/
-enum DrawCallType
-{
-	INVALID, // Invalid draw call that wasn't correctly initialized from 0ed memory, or a signal that end of buffer was reached.
-	RECTANGLE, // Draw pixels with a corner origin and a specific width and height.
-	ELLIPSE, // Draw pixels in an ellipse with a specific origin and radius.
-	BITMAP,
-};
-
-// Base class for all draw call data classes. Contains spatial and visual transform information relevant to all types.
-struct DrawCall
-{
-	DrawCallType
-
-	// Origin coordinates of the draw call to be interpreted differently depending on type.
-	uint16_t x, y;
-
-	// Rotation in degrees of the drawn shape.
-	uint16_t angleDeg;
-
-	ColorRGBA color;
-};
-
-/*
-	Data for a Rectangle type draw call. Origin coordinates should be interpreted as top left corner position.
-	Angle should be interpreted as Rectangle Width along cosinus, Height along sinus at Angle = 0.
-*/
-struct RectangleDrawCallData : public DrawCall
-{
-	// Dimensions of rectangle.
-	uint16_t width, height;
-};
-
-/*
-	Contains all draw calls emitted by the client over a single frame.
-*/
-struct ClientFrameDrawCallBuffer
-{
-	/* 
-		Provided the buffer isn't full, returns the memory address where the draw call of the passed type can be built.
-	*/
-	void* BuildDrawCall(DrawCallType Type);
-
-	/*
-		Returns next draw call in the buffer
-	*/
-	DrawCall* GetNext() const;
-
-	// Pre-allocated memory for holding draw call structures.
-	DrawCall* Buffer = nullptr;
-
-	// Buffer size in BYTES
-	size_t BufferSize = 0;
-
-	// When filling the buffer in, is the write cursor. When reading the buffer, is the read cursor.
-	size_t CursorPosition = 0;
-};
+#include <stdint.h>
 
 // Generic interface for a memory manager usable by the Client for Persistent and Frame memory.
 struct ClientMemoryManager
@@ -105,6 +34,8 @@ struct ClientContext
 	ClientMemoryManager PersistentMemory;
 };
 
+struct ClientFrameDrawCallBuffer;
+
 // Data associated with a single frame of the Client's execution, during which it should integrate the passage of time, react to inputs
 // and output draw calls and audio samples.
 struct ClientFrameData
@@ -116,7 +47,7 @@ struct ClientFrameData
 	ClientMemoryManager FrameMemory;
 
 	// Draw Call buffer for this frame, to be populated as output by the client.
-	ClientFrameDrawCallBuffer DrawCallBuffer;
+	ClientFrameDrawCallBuffer* DrawCallBuffer;
 };
 
 // Contains function pointers associated with symbol names for easier symbol loading on the platform and to provide a centralized calling
