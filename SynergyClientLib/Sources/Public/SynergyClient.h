@@ -3,7 +3,7 @@
 #ifndef SYNERGY_CLIENT_INCLUDED
 #define SYNERGY_CLIENT_INCLUDED
 
-#include <stdint.h>
+#include <cstdint.h>
 
 union ColorRGBA
 {
@@ -57,10 +57,23 @@ struct RectangleDrawCallData : public DrawCall
 struct ClientFrameDrawCallBuffer
 {
 	/* 
-		Allocates room in the buffer to build a drawcall of the given type.
-		Returns non-null pointer to the place in memory to build the drawcall in if successful.
+		Provided the buffer isn't full, returns the memory address where the draw call of the passed type can be built.
 	*/
 	void* BuildDrawCall(DrawCallType Type);
+
+	/*
+		Returns next draw call in the buffer
+	*/
+	DrawCall* GetNext() const;
+
+	// Pre-allocated memory for holding draw call structures.
+	DrawCall* Buffer = nullptr;
+
+	// Buffer size in BYTES
+	size_t BufferSize = 0;
+
+	// When filling the buffer in, is the write cursor. When reading the buffer, is the read cursor.
+	size_t CursorPosition = 0;
 };
 
 // Generic interface for a memory manager usable by the Client for Persistent and Frame memory.
@@ -102,7 +115,8 @@ struct ClientFrameData
 	// General-purpose Memory for this specific frame. Anything allocated here should be wiped automatically at the end of the frame by the platform.
 	ClientMemoryManager FrameMemory;
 
-	// 
+	// Draw Call buffer for this frame, to be populated as output by the client.
+	ClientFrameDrawCallBuffer DrawCallBuffer;
 };
 
 // Contains function pointers associated with symbol names for easier symbol loading on the platform and to provide a centralized calling
