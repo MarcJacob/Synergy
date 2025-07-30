@@ -7,5 +7,7 @@ int main(int argc, char** argv)
 {
 	std::cout << "Hello World ! This is the Server.\n";
 
+	SynergyCore::OutputHelloWorldFromCore();
+
 	return 0;
 }
