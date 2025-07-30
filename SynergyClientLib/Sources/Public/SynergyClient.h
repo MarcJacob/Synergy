@@ -3,6 +3,8 @@
 #ifndef SYNERGY_CLIENT_INCLUDED
 #define SYNERGY_CLIENT_INCLUDED
 
+#include <SynergyCore.h>
+
 #include <stdint.h>
 
 // Generic interface for a memory manager usable by the Client for Persistent and Frame memory.
@@ -32,6 +34,10 @@ struct ClientContext
 
 	// Memory manager for persistent memory allocations whose lifetime is managed by the Client.
 	ClientMemoryManager PersistentMemory;
+
+	// Current size in pixels of the Viewport, which is the virtual or real (depending on Platform implementation) surface the client uses
+	// as reference to build Draw calls.
+	Vector2s ViewportSize;
 };
 
 struct ClientFrameDrawCallBuffer;

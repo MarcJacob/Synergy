@@ -32,8 +32,8 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 
 	// Add a drawcall for a red rectangle
 	RectangleDrawCallData* rect = reinterpret_cast<RectangleDrawCallData*>(FrameData.DrawCallBuffer->NewDrawCall(DrawCallType::RECTANGLE));
-	rect->x = 50 + 10 * sinf(FrameData.FrameTime * FrameData.FrameNumber);
-	rect->y = 50;
+	rect->x = 100 + 100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f);
+	rect->y = 100;
 	rect->width = 10;
 	rect->height = 10;
 	rect->color.full = 0xFFFF0000;
