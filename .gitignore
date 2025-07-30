@@ -1,0 +1,12 @@
+# Visual Studio files
+
+*.sln
+*.vcxproj
+.vs/
+*.user
+*.filters
+
+# Local project files
+
+Build/
+Intermediate/
