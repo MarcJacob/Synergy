@@ -4,6 +4,7 @@
 
 #define DLL_EXPORT extern "C" __declspec(dllexport)
 
-DLL_EXPORT void OutputHelloWorldFromCore();
+// Test function outputting Hello World sentence and version info on std::out for testing.
+DLL_EXPORT void Hello();
 
 #endif

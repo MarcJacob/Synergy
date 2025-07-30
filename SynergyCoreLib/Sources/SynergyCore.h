@@ -3,7 +3,7 @@
 
 namespace SynergyCore
 {
-	void OutputHelloWorldFromCore();
+
 }
 
 #endif
