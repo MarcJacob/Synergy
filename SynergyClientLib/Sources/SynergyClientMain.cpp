@@ -48,8 +48,6 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 
 DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
 {
-	std::cout << "Running client frame " << FrameData.FrameNumber << "\n\tFrame Time = " << FrameData.FrameTime << "\n";
-
 	OutputDrawCalls(Context, FrameData);
 }
 
