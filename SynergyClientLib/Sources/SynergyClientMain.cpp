@@ -1,6 +1,6 @@
 #include "SynergyClient.h"
 
-#include "Public/SynergyClientDrawBuffer.h"
+#include "Public/SynergyClientDrawing.h"
 
 #include <iostream> // TODO instead of using iostream the user of the library should provide
 // contextual data so it can use any logging solution it wants.
@@ -20,30 +20,37 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 	std::cout << "Starting client.\n";
 }
 
-DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
+void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 {
-	std::cout << "Running client frame " << FrameData.FrameNumber << "\n\tFrame Time = " << FrameData.FrameTime << "\n";
-
-	if (!FrameData.DrawCallBuffer->BeginWrite())
+	if (FrameData.NewDrawCall == nullptr)
 	{
+		// Drawing not supported.
 		return;
 	}
 
 	// Add a drawcall for a red rectangle
-	RectangleDrawCallData* rect = reinterpret_cast<RectangleDrawCallData*>(FrameData.DrawCallBuffer->NewDrawCall(DrawCallType::RECTANGLE));
-	rect->x = 100 + 100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f);
+	RectangleDrawCallData* rect = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(DrawCallType::RECTANGLE));
+	rect->x = 100 + static_cast<uint16_t>(100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f));
 	rect->y = 100;
 	rect->width = 10;
 	rect->height = 10;
 	rect->color.full = 0xFFFF0000;
 
-	LineDrawCallData* line = reinterpret_cast<LineDrawCallData*>(FrameData.DrawCallBuffer->NewDrawCall(DrawCallType::LINE));
+	// Add a drawcall linking the red rectangle to the top left corner of the viewport with a yellow line.
+	LineDrawCallData* line = reinterpret_cast<LineDrawCallData*>(FrameData.NewDrawCall(DrawCallType::LINE));
 	line->x = rect->x;
 	line->y = rect->y;
 	line->destX = 0;
 	line->destY = 0;
 	line->width = 10;
 	line->color.full = 0xFFFFFF00;
+}
+
+DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
+{
+	std::cout << "Running client frame " << FrameData.FrameNumber << "\n\tFrame Time = " << FrameData.FrameTime << "\n";
+
+	OutputDrawCalls(Context, FrameData);
 }
 
 DLL_EXPORT void ShutdownClient(ClientContext& Context)

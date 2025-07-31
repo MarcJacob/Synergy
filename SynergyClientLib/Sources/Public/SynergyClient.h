@@ -40,7 +40,8 @@ struct ClientContext
 	Vector2s ViewportSize;
 };
 
-struct ClientFrameDrawCallBuffer;
+struct DrawCall;
+enum class DrawCallType;
 
 // Data associated with a single frame of the Client's execution, during which it should integrate the passage of time, react to inputs
 // and output draw calls and audio samples.
@@ -52,8 +53,10 @@ struct ClientFrameData
 	// General-purpose Memory for this specific frame. Anything allocated here should be wiped automatically at the end of the frame by the platform.
 	ClientMemoryManager FrameMemory;
 
-	// Draw Call buffer for this frame, to be populated as output by the client.
-	ClientFrameDrawCallBuffer* DrawCallBuffer;
+	// Requests the allocation of a new draw call for this frame, to be processed by the platform usually at the end of the frame.
+	// If successful returns a pointer to a base DrawCall structure with the correct underlying data type according to the passed type.
+	// If it fails for any reason, returns nullptr.
+	DrawCall* (*NewDrawCall)(DrawCallType Type);
 };
 
 // Contains function pointers associated with symbol names for easier symbol loading on the platform and to provide a centralized calling
