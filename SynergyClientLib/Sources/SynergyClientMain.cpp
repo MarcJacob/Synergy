@@ -9,6 +9,16 @@
 
 #define DLL_EXPORT extern "C" __declspec(dllexport)
 
+/* 
+	State of the Client as a whole. Persistent memory pointer provided by the platform is cast to this.
+*/
+struct ClientState
+{
+	ViewportID MainViewportID;
+};
+
+#define CastClientState(MemPtr) (*reinterpret_cast<ClientState*>(MemPtr))
+
 DLL_EXPORT void Hello()
 {
 	std::cout << "Hello World from Synergy Client Lib !" << "\n";
@@ -17,11 +27,16 @@ DLL_EXPORT void Hello()
 
 DLL_EXPORT void StartClient(ClientContext& Context)
 {
-	std::cout << "Starting client.\n";
+	std::cout << "Starting client.\nAllocating Main Viewport.\n";
+	ClientState& State = CastClientState(Context.PersistentMemory.Memory);
+
+	State.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
 }
 
 void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 {
+	ClientState& State = CastClientState(Context.PersistentMemory.Memory);
+
 	if (FrameData.NewDrawCall == nullptr)
 	{
 		// Drawing not supported.
@@ -29,7 +44,7 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	}
 
 	// Add a drawcall for a red rectangle
-	RectangleDrawCallData* rect = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(DrawCallType::RECTANGLE));
+	RectangleDrawCallData* rect = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
 	rect->x = 100 + static_cast<uint16_t>(100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f));
 	rect->y = 100;
 	rect->width = 10;
@@ -37,7 +52,7 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	rect->color.full = 0xFFFF0000;
 
 	// Add a drawcall linking the red rectangle to the top left corner of the viewport with a yellow line.
-	LineDrawCallData* line = reinterpret_cast<LineDrawCallData*>(FrameData.NewDrawCall(DrawCallType::LINE));
+	LineDrawCallData* line = reinterpret_cast<LineDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::LINE));
 	line->x = rect->x;
 	line->y = rect->y;
 	line->destX = 0;
