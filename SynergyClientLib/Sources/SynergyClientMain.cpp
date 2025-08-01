@@ -31,7 +31,6 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 	ClientState& State = CastClientState(Context.PersistentMemory.Memory);
 
 	State.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
-	State.SecondViewportTestID = Context.Platform.AllocateViewport("Second viewport !!", { 300, 100 });
 }
 
 void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
@@ -59,15 +58,7 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	line->destX = 0;
 	line->destY = 0;
 	line->width = 10;
-	line->color.full = 0xFFFFFF00;
-
-	// Add blue rectangle to secondary viewport
-	RectangleDrawCallData* rect2 = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.SecondViewportTestID, DrawCallType::RECTANGLE));
-	rect2->x = 100;
-	rect2->y = 50;
-	rect2->width = 50;
-	rect2->height = 10;
-	rect2->color.full = 0xFF0000FF;
+	line->color.full = 0xFFFF00FF;
 }
 
 DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
