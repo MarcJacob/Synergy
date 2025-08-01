@@ -1,4 +1,3 @@
-#include "SynergyServer.h"
 #include "SynergyCore.h"
 
 #include <iostream>

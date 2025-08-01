@@ -1,6 +1,5 @@
 #include "SynergyClient.h"
-
-#include "Public/SynergyClientDrawing.h"
+#include "SynergyClientDrawing.h"
 
 #include <iostream> // TODO instead of using iostream the user of the library should provide
 // contextual data so it can use any logging solution it wants.
@@ -23,7 +22,7 @@ struct ClientState
 DLL_EXPORT void Hello()
 {
 	std::cout << "Hello World from Synergy Client Lib !" << "\n";
-	std::cout << "VERSION 0.1 - IN DEV\n";
+	std::cout << "VERSION 0.1.1 - IN DEV\n";
 }
 
 DLL_EXPORT void StartClient(ClientContext& Context)
