@@ -32,7 +32,7 @@ struct ClientState
 	ClientInputState Input;
 
 	// TEST CODE move a rectangle around on the main viewport using input.
-	Vector2s PlayerCoordinates;
+	Vector2f PlayerCoordinates;
 	float PlayerSpeed;
 };
 
@@ -56,7 +56,7 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 
 	// TEST CODE Init player coordinates and speed.
 	State.PlayerCoordinates = {0, 0};
-	State.PlayerSpeed = 80.f;
+	State.PlayerSpeed = 20.f;
 }
 
 void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
@@ -84,12 +84,12 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	line->destX = 0;
 	line->destY = 0;
 	line->width = 10;
-	line->color.full = 0xFFFF00FF;
+	line->color.full = 0xFFFFFFFF;
 
 	// TEST CODE Add drawcall for the player as a white rectangle.
 	RectangleDrawCallData* player = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
-	player->x = State.PlayerCoordinates.x;
-	player->y = State.PlayerCoordinates.y;
+	player->x = static_cast<uint16_t>(State.PlayerCoordinates.x);
+	player->y = static_cast<uint16_t>(State.PlayerCoordinates.y);
 	player->width = 10;
 	player->height = 10;
 	player->color.full = 0xFFFFFFFF;
@@ -158,7 +158,19 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 	// TEST CODE Read in inputs and move the player.
 	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_RIGHT)] == ActionInputState::HELD)
 	{
-		State.PlayerCoordinates.x += static_cast<uint16_t>(State.PlayerSpeed * FrameData.FrameTime);
+		State.PlayerCoordinates.x += State.PlayerSpeed * FrameData.FrameTime;
+	}
+	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_LEFT)] == ActionInputState::HELD)
+	{
+		State.PlayerCoordinates.x -= State.PlayerSpeed * FrameData.FrameTime;
+	}
+	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_DOWN)] == ActionInputState::HELD)
+	{
+		State.PlayerCoordinates.y += State.PlayerSpeed * FrameData.FrameTime;
+	}
+	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_UP)] == ActionInputState::HELD)
+	{
+		State.PlayerCoordinates.y -= State.PlayerSpeed * FrameData.FrameTime;
 	}
 }
 

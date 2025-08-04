@@ -4,4 +4,4 @@ target_include_directories(SynergyClientLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/I
 target_include_directories(SynergyClientLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../SynergyCoreLib/Includes/Public/)
 link_libraries(SynergyClientLib SynergyCoreLib)
 
-target_link_options(SynergyClientLib PRIVATE /PDBALTPATH:"")
+target_link_options(SynergyClientLib PRIVATE "/PDBALTPATH:SynergyClientLib.pdb")
