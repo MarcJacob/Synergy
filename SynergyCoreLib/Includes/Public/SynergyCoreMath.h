@@ -1,6 +1,6 @@
 // Common Math symbols declarations.
 
-#include <cstdint>
+#include <stdint.h>
 #include <math.h> // Could we get rid of this at some point ?
 
 // Core template for Vectors of 2 scalar elements.
