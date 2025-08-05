@@ -35,7 +35,7 @@ struct DrawCall
 	DrawCallType type;
 
 	// Origin coordinates of the draw call to be interpreted differently depending on type.
-	uint16_t x, y;
+	int16_t x, y;
 
 	// Rotation in degrees of the drawn shape.
 	uint16_t angleDeg;

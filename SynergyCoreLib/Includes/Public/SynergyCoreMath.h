@@ -66,6 +66,6 @@ typedef Vector2<float> Vector2f;
 typedef Vector2<double> Vector2d;
 
 // Integer types
-typedef Vector2<uint16_t> Vector2s;
-typedef Vector2<uint32_t> Vector2i;
-typedef Vector2<uint64_t> Vector2l;
+typedef Vector2<int16_t> Vector2s;
+typedef Vector2<int32_t> Vector2i;
+typedef Vector2<int64_t> Vector2l;
