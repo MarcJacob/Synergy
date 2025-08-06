@@ -102,13 +102,16 @@ enum class ActionKey : uint8_t
 struct ActionInputEvent
 {
     // Time this event happened at normalized from Frame Start Time - Frame Time to Frame Start Time.
-    float TimeNormalized;
+    float timeNormalized;
     
     // Viewport this event relates to.
-    ViewportID Viewport;
+    ViewportID viewport;
+
+    // Location of the cursor at the time of the event.
+    Vector2s cursorLocation;
 
     // Key or Button associated with the event.
-    ActionKey Key;
+    ActionKey key;
 
     // If true, then this is the Release of the Action Input Event. If false, it's the start.
     bool bRelease;

@@ -20,6 +20,20 @@ enum ActionInputState
 struct ClientInputState
 {
 	ActionInputState ActionInputStates[ActionKey::ACTION_KEY_COUNT];
+
+	// Latest recorded cursor location relative to cursor viewport. TODO Associate to specific action events for greater precision.
+	Vector2s CursorLocation;
+
+	// Latest recorded viewport hovered by cursor. TODO: Same as CursorLocation.
+	ViewportID CursorViewport;
+};
+
+// TEST CODE Entity data structure for spawning and displaying dynamically spawned entities.
+struct TestEntity
+{
+	Vector2f Location;
+	ColorRGBA Color;
+	uint8_t Size;
 };
 
 /* 
@@ -34,6 +48,32 @@ struct ClientState
 	// TEST CODE move a rectangle around on the main viewport using input.
 	Vector2f PlayerCoordinates;
 	float PlayerSpeed;
+
+	// TEST CODE Entity buffer.
+	struct
+	{
+		static constexpr uint16_t BUFFER_SIZE = 256;
+
+		void SpawnEntity(Vector2f Location, ColorRGBA Color, uint8_t Size)
+		{
+			if (EntityCount >= BUFFER_SIZE)
+			{
+				std::cout << "Cannot spawn entity: Buffer max size reached.\n";
+				return;
+			}
+
+			TestEntity& newEntity = Buffer[EntityCount];
+			newEntity.Location = Location;
+			newEntity.Color = Color;
+			newEntity.Size = Size;
+
+			EntityCount++;
+		}
+
+		TestEntity Buffer[BUFFER_SIZE];
+		size_t EntityCount;
+
+	} Entities;
 };
 
 #define CastClientState(MemPtr) (*reinterpret_cast<ClientState*>(MemPtr))
@@ -57,6 +97,9 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 	// TEST CODE Init player coordinates and speed.
 	State.PlayerCoordinates = {0, 0};
 	State.PlayerSpeed = 20.f;
+
+	// TEST CODE Zero out entities memory.
+	State.Entities = {};
 }
 
 void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
@@ -84,7 +127,7 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	line->destX = 0;
 	line->destY = 0;
 	line->width = 10;
-	line->color.full = 0xFFFFFFFF;
+	line->color.full = 0xFFFF00FF;
 
 	// TEST CODE Add drawcall for the player as a white rectangle.
 	RectangleDrawCallData* player = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
@@ -93,6 +136,19 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	player->width = 10;
 	player->height = 10;
 	player->color.full = 0xFFFFFFFF;
+
+	// TEST CODE draw test entities.
+	for (size_t entityIndex = 0; entityIndex < State.Entities.EntityCount; entityIndex++)
+	{
+		TestEntity& entity = State.Entities.Buffer[entityIndex];
+		
+		RectangleDrawCallData* entityRect = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
+		entityRect->x = entity.Location.x;
+		entityRect->y = entity.Location.y;
+		entityRect->width = entity.Size;
+		entityRect->height = entity.Size;
+		entityRect->color.full = entity.Color.full;
+	}
 }
 
 void ProcessInputs(ClientContext& Context, ClientFrameData& FrameData)
@@ -120,7 +176,7 @@ void ProcessInputs(ClientContext& Context, ClientFrameData& FrameData)
 	{
 		ActionInputEvent& event = FrameData.InputEvents.Buffer[inputEventIndex];
 
-		uint8_t keyIndex = static_cast<uint8_t>(event.Key);
+		uint8_t keyIndex = static_cast<uint8_t>(event.key);
 
 		if (!event.bRelease)
 		{
@@ -143,6 +199,15 @@ void ProcessInputs(ClientContext& Context, ClientFrameData& FrameData)
 				default:
 					break;
 			}
+		}
+
+		if (inputEventIndex == FrameData.InputEvents.EventCount - 1)
+		{
+			// Last event gives us the cursor position and viewport ofor this frame.
+			// TODO Change input system so each event's data is fully recorded.
+
+			State.Input.CursorLocation = event.cursorLocation;
+			State.Input.CursorViewport = event.viewport;
 		}
 	}
 }
@@ -171,6 +236,15 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_UP)] == ActionInputState::HELD)
 	{
 		State.PlayerCoordinates.y -= State.PlayerSpeed * FrameData.FrameTime;
+	}
+
+	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::KEY_E)] == ActionInputState::UP)
+	{
+		// Spawn rectangle entity.
+		Vector2f location = State.Input.CursorLocation;
+		ColorRGBA color = { 255, 0, 0, 255 }; // Red. TODO Let's define some readable color values.
+		uint8_t size = 10;
+		State.Entities.SpawnEntity(location, color, size);
 	}
 }
 

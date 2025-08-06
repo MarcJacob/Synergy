@@ -9,6 +9,14 @@ template<typename ScalarType>
 struct Vector2
 {
 	ScalarType x, y;
+
+	Vector2() = default;
+	Vector2(ScalarType inX, ScalarType inY): x(inX), y(inY) {}
+
+	template<typename ScalarTypeFROM>
+	Vector2(ScalarTypeFROM from) : x(static_cast<ScalarType>(from.x)), y(static_cast<ScalarType>(from.y))
+	{
+	}
 };
 
 // Construction
