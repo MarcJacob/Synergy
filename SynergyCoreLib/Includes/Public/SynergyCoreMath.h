@@ -13,9 +13,19 @@ struct Vector2
 	Vector2() = default;
 	Vector2(ScalarType inX, ScalarType inY): x(inX), y(inY) {}
 
+	// Conversion constructors and operators.
+
 	template<typename ScalarTypeFROM>
-	Vector2(ScalarTypeFROM from) : x((ScalarType)(from.x)), y((ScalarType)(from.y))
+	Vector2(ScalarTypeFROM fromX, ScalarTypeFROM fromY) : x((ScalarType)(fromX)), y((ScalarType)(fromY)) {}
+
+	template<typename ScalarTypeFROM>
+	Vector2(const Vector2<ScalarTypeFROM>& from) : x((ScalarType)(from.x)), y((ScalarType)(from.y)) {}
+
+	template<typename ScalarTypeFROM>
+	inline void operator =(const Vector2<ScalarTypeFROM>& from)
 	{
+		x = (ScalarType)(from.x);
+		y = (ScalarType)(from.y);
 	}
 };
 

@@ -2,8 +2,7 @@
 #include "SynergyClientDrawing.h"
 #include "SynergyClientInput.h"
 
-#include <iostream> // TODO instead of using iostream the user of the library should provide
-// contextual data so it can use any logging solution it wants.
+#include <iostream>
 
 // EXPORTED SYMBOLS DEFINITION
 
@@ -19,7 +18,7 @@ enum ActionInputState
 
 struct ClientInputState
 {
-	ActionInputState ActionInputStates[ActionKey::ACTION_KEY_COUNT];
+	ActionInputState ActionInputStates[(size_t)ActionKey::ACTION_KEY_COUNT];
 
 	// Latest recorded cursor location relative to cursor viewport. TODO Associate to specific action events for greater precision.
 	Vector2s CursorLocation;
@@ -114,28 +113,22 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 
 	// TEST CODE Add a drawcall for a red rectangle
 	RectangleDrawCallData* rect = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
-	rect->x = 100 + (uint16_t)(100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f));
-	rect->y = 100;
-	rect->width = 10;
-	rect->height = 10;
+	rect->origin = { 100 + (int16_t)(100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f)), 100 };
+	rect->dimensions = { 10, 10 };
 	rect->color.full = 0xFFFF0000;
 
 	// TEST CODE Add a drawcall linking the red rectangle to the top left corner of the viewport with a yellow line.
 	LineDrawCallData* line = (LineDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::LINE));
-	line->x = rect->x;
-	line->y = rect->y;
-	line->destX = 0;
-	line->destY = 0;
+	line->origin = rect->origin;
+	line->destination = {0, 0};
 	line->width = 10;
 	line->color.full = 0xFFFF00FF;
 
 	// TEST CODE Add drawcall for the player as a white rectangle.
-	RectangleDrawCallData* player = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
-	player->x = (uint16_t)(State.PlayerCoordinates.x);
-	player->y = (uint16_t)(State.PlayerCoordinates.y);
-	player->width = 10;
-	player->height = 10;
-	player->color.full = 0xFFFFFFFF;
+	RectangleDrawCallData* playerRect = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
+	playerRect->origin = State.PlayerCoordinates;
+	playerRect->dimensions = { 10, 10 };
+	playerRect->color.full = 0xFFFFFFFF;
 
 	// TEST CODE draw test entities.
 	for (size_t entityIndex = 0; entityIndex < State.Entities.EntityCount; entityIndex++)
@@ -143,10 +136,8 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 		TestEntity& entity = State.Entities.Buffer[entityIndex];
 		
 		RectangleDrawCallData* entityRect = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
-		entityRect->x = entity.Location.x;
-		entityRect->y = entity.Location.y;
-		entityRect->width = entity.Size;
-		entityRect->height = entity.Size;
+		entityRect->origin = entity.Location;
+		entityRect->dimensions = { entity.Size, entity.Size };
 		entityRect->color.full = entity.Color.full;
 	}
 }
@@ -242,7 +233,7 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 	{
 		// Spawn rectangle entity.
 		Vector2f location = State.Input.CursorLocation;
-		ColorRGBA color = { 255, 0, 0, 255 }; // Red. TODO Let's define some readable color values.
+		ColorRGBA color = { 255, 255, 0, 0 }; // Red.
 		uint8_t size = 10;
 		State.Entities.SpawnEntity(location, color, size);
 	}

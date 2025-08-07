@@ -5,6 +5,10 @@
 
 #include <iostream>
 
+/*
+	Basic RGBA color structure used by the Client to understand and express colors.The platform may need to translate it to its own format,
+	perhaps even ignoring some colors if necessary.
+*/
 union ColorRGBA
 {
 	struct
@@ -35,7 +39,7 @@ struct DrawCall
 	DrawCallType type;
 
 	// Origin coordinates of the draw call to be interpreted differently depending on type.
-	int16_t x, y;
+	Vector2s origin;
 
 	// Rotation in degrees of the drawn shape.
 	uint16_t angleDeg;
@@ -50,7 +54,7 @@ struct DrawCall
 struct LineDrawCallData : public DrawCall
 {
 	// Destination point of the line.
-	uint16_t destX, destY;
+	Vector2s destination;
 
 	// Width of the line along its main axis in pixels.
 	uint16_t width;
@@ -63,28 +67,54 @@ struct LineDrawCallData : public DrawCall
 struct RectangleDrawCallData : public DrawCall
 {
 	// Dimensions of rectangle.
-	uint16_t width, height;
+	Vector2s dimensions;
 };
 
 /*
-	Data for a Ellipse type draw call. Origin coordinates should be interpreted as the center of the ellipse where the medians intersect.
+	Data for a Ellipse or Circle type draw call. 
+	Origin coordinates should be interpreted as the center of the ellipse where the medians intersect.
 	Angle should be interpreted as radius X along cosinus, radius Y along sinus at Angle = 0.
+	If Y == 0, draw a circle with X as its radius. Use the circleRadius member only for a more obvious approach to requesting a circle draw.
 */
 struct EllipseDrawCallData : public DrawCall
 {
-	float radiusX, radiusY;
+	union
+	{
+		// Radii towards the "sides" and "top-to-bottom" axis of the ellipse when Angle = 0.
+		Vector2f ellipticRadii;
+		// Radius of the circle.
+		float circleRadius;
+	};
 };
 
 /*
 	Data for Bitmap type draw call. Behaves the same as a Rectangle draw call but attempts to stretch / shrink the pixels with the given resolution
 	to fit the rectangle.
-	TODO Figure out pixel memory management strategy.
 */
 struct BitmapDrawCallData : public RectangleDrawCallData
 {
-	uint16_t resolutionX, resolutionY;
-	// TODO Bitmap stuff in here. How do we handle variable sized pixel buffers ? Probably need some guarantee that the pixel data stays in
-	// memory somewhere. AllocateBitmap platform call ? Use Client memory ?
+	Vector2s bitmapResolution;
 };
+
+/*
+	Returns the expected actual size of a draw call data structure.
+	Returns 0 if the call is invalid for any reason.
+*/
+inline size_t GetDrawCallSize(DrawCallType CallType)
+{
+	switch (CallType)
+	{
+	case(DrawCallType::LINE):
+		return sizeof(LineDrawCallData);
+	case(DrawCallType::RECTANGLE):
+		return sizeof(RectangleDrawCallData);
+	case(DrawCallType::ELLIPSE):
+		return sizeof(EllipseDrawCallData);
+	case(DrawCallType::BITMAP):
+		return sizeof(BitmapDrawCallData);
+	default:
+		return 0;
+	}
+}
 
 #endif
