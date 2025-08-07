@@ -8,6 +8,7 @@
 
 // Source includes
 #include "Input_INC.cpp"
+#include "UI_INC.cpp"
 #include "Drawing_INC.cpp"
 
 // EXPORTED SYMBOLS DEFINITION
