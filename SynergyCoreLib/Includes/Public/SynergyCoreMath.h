@@ -14,7 +14,7 @@ struct Vector2
 	Vector2(ScalarType inX, ScalarType inY): x(inX), y(inY) {}
 
 	template<typename ScalarTypeFROM>
-	Vector2(ScalarTypeFROM from) : x(static_cast<ScalarType>(from.x)), y(static_cast<ScalarType>(from.y))
+	Vector2(ScalarTypeFROM from) : x((ScalarType)(from.x)), y((ScalarType)(from.y))
 	{
 	}
 };

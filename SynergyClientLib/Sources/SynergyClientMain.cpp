@@ -76,7 +76,7 @@ struct ClientState
 	} Entities;
 };
 
-#define CastClientState(MemPtr) (*reinterpret_cast<ClientState*>(MemPtr))
+#define CastClientState(MemPtr) (*(ClientState*)(MemPtr))
 
 DLL_EXPORT void Hello()
 {
@@ -113,15 +113,15 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	}
 
 	// TEST CODE Add a drawcall for a red rectangle
-	RectangleDrawCallData* rect = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
-	rect->x = 100 + static_cast<uint16_t>(100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f));
+	RectangleDrawCallData* rect = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
+	rect->x = 100 + (uint16_t)(100 * sinf(FrameData.FrameTime * FrameData.FrameNumber / 2.f));
 	rect->y = 100;
 	rect->width = 10;
 	rect->height = 10;
 	rect->color.full = 0xFFFF0000;
 
 	// TEST CODE Add a drawcall linking the red rectangle to the top left corner of the viewport with a yellow line.
-	LineDrawCallData* line = reinterpret_cast<LineDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::LINE));
+	LineDrawCallData* line = (LineDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::LINE));
 	line->x = rect->x;
 	line->y = rect->y;
 	line->destX = 0;
@@ -130,9 +130,9 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	line->color.full = 0xFFFF00FF;
 
 	// TEST CODE Add drawcall for the player as a white rectangle.
-	RectangleDrawCallData* player = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
-	player->x = static_cast<uint16_t>(State.PlayerCoordinates.x);
-	player->y = static_cast<uint16_t>(State.PlayerCoordinates.y);
+	RectangleDrawCallData* player = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
+	player->x = (uint16_t)(State.PlayerCoordinates.x);
+	player->y = (uint16_t)(State.PlayerCoordinates.y);
 	player->width = 10;
 	player->height = 10;
 	player->color.full = 0xFFFFFFFF;
@@ -142,7 +142,7 @@ void OutputDrawCalls(ClientContext& Context, ClientFrameData& FrameData)
 	{
 		TestEntity& entity = State.Entities.Buffer[entityIndex];
 		
-		RectangleDrawCallData* entityRect = reinterpret_cast<RectangleDrawCallData*>(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
+		RectangleDrawCallData* entityRect = (RectangleDrawCallData*)(FrameData.NewDrawCall(State.MainViewportID, DrawCallType::RECTANGLE));
 		entityRect->x = entity.Location.x;
 		entityRect->y = entity.Location.y;
 		entityRect->width = entity.Size;
@@ -156,7 +156,7 @@ void ProcessInputs(ClientContext& Context, ClientFrameData& FrameData)
 	ClientState& State = CastClientState(Context.PersistentMemory.Memory);
 
 	// "Advance" the state of non-RELEASED inputs.
-	for (uint8_t actionKeyIndex = 0; actionKeyIndex < static_cast<uint8_t>(ActionKey::ACTION_KEY_COUNT); actionKeyIndex++)
+	for (uint8_t actionKeyIndex = 0; actionKeyIndex < (uint8_t)(ActionKey::ACTION_KEY_COUNT); actionKeyIndex++)
 	{
 		switch(State.Input.ActionInputStates[actionKeyIndex])
 			{
@@ -176,7 +176,7 @@ void ProcessInputs(ClientContext& Context, ClientFrameData& FrameData)
 	{
 		ActionInputEvent& event = FrameData.InputEvents.Buffer[inputEventIndex];
 
-		uint8_t keyIndex = static_cast<uint8_t>(event.key);
+		uint8_t keyIndex = (uint8_t)(event.key);
 
 		if (!event.bRelease)
 		{
@@ -221,24 +221,24 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 	OutputDrawCalls(Context, FrameData);
 
 	// TEST CODE Read in inputs and move the player.
-	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_RIGHT)] == ActionInputState::HELD)
+	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_RIGHT)] == ActionInputState::HELD)
 	{
 		State.PlayerCoordinates.x += State.PlayerSpeed * FrameData.FrameTime;
 	}
-	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_LEFT)] == ActionInputState::HELD)
+	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_LEFT)] == ActionInputState::HELD)
 	{
 		State.PlayerCoordinates.x -= State.PlayerSpeed * FrameData.FrameTime;
 	}
-	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_DOWN)] == ActionInputState::HELD)
+	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_DOWN)] == ActionInputState::HELD)
 	{
 		State.PlayerCoordinates.y += State.PlayerSpeed * FrameData.FrameTime;
 	}
-	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::ARROW_UP)] == ActionInputState::HELD)
+	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_UP)] == ActionInputState::HELD)
 	{
 		State.PlayerCoordinates.y -= State.PlayerSpeed * FrameData.FrameTime;
 	}
 
-	if (State.Input.ActionInputStates[static_cast<uint8_t>(ActionKey::KEY_E)] == ActionInputState::UP)
+	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::KEY_E)] == ActionInputState::UP)
 	{
 		// Spawn rectangle entity.
 		Vector2f location = State.Input.CursorLocation;
