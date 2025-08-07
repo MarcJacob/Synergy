@@ -5,7 +5,7 @@
 
 #include "SynergyCore.h"
 
-#include "SynergyClientViewport.h"
+#include "SynergyClientAPI_Viewport.h"
 
 #include <stdint.h>
 
@@ -115,6 +115,25 @@ struct ActionInputEvent
 
     // If true, then this is the Release of the Action Input Event. If false, it's the start.
     bool bRelease;
+};
+
+enum ActionInputState
+{
+    RELEASED,
+    DOWN,
+    HELD,
+    UP
+};
+
+struct ClientInputState
+{
+    ActionInputState ActionInputStates[(size_t)ActionKey::ACTION_KEY_COUNT];
+
+    // Latest recorded cursor location relative to cursor viewport.
+    Vector2s CursorLocation;
+
+    // Latest recorded viewport hovered by cursor.
+    ViewportID CursorViewport;
 };
 
 #endif

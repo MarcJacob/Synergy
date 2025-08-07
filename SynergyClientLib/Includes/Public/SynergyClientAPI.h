@@ -1,11 +1,17 @@
-// Contains public-facing declarations for Client API structures.
+/* 
+	Contains public - facing declarations for Client API structures for use by the Platform layer 
+	to drive the client's execution and pass it the data it requires.
+*/
 
 #ifndef SYNERGY_CLIENT_INCLUDED
 #define SYNERGY_CLIENT_INCLUDED
 
 #include <SynergyCore.h>
 
-#include "SynergyClientInput.h"
+// Sub-headers for the API. #NOTE(MJ) I see little point in keeping those separate so let's just make this the "god include".
+#include "SynergyClientAPI_Viewport.h"
+#include "SynergyClientAPI_Drawing.h"
+#include "SynergyClientAPI_Input.h"
 
 #include <stdint.h>
 
@@ -74,20 +80,15 @@ struct ClientContext
 
 	State State;
 
+	// Underlying Platform API, usable at any point by the client and guaranteed to be thread-safe when relevant.
+	PlatformAPI Platform;
+
 	// Memory guaranteed to be persistent from the moment the client starts to when it shuts down.
 	struct
 	{
 		uint8_t* Memory;
 		size_t Size;
 	} PersistentMemory;
-	
-
-	// Current size in pixels of the Viewport, which is the virtual or real (depending on Platform implementation) surface the client uses
-	// as reference to build Draw calls.
-	Vector2s ViewportSize;
-
-	// Underlying Platform API, usable at any point by the client and guaranteed to be thread-safe when relevant.
-	PlatformAPI Platform;
 };
 
 // Contains function pointers associated with symbol names for easier symbol loading on the platform and to provide a centralized calling
