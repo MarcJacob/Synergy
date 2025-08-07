@@ -70,7 +70,7 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 	{
 		// Spawn rectangle entity.
 		Vector2f location = State.Input.CursorLocation;
-		ColorRGBA color = { 255, 255, 0, 0 }; // Red.
+		ColorRGBA color = { 0, 0, 255, 255 }; // Red.
 		uint8_t size = 10;
 		State.Entities.SpawnEntity(location, color, size);
 	}
