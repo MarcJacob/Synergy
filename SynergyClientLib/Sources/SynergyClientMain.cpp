@@ -31,13 +31,6 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 	State.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
 
 	State.Input = {};
-
-	// TEST CODE Init player coordinates and speed.
-	State.PlayerCoordinates = {0, 0};
-	State.PlayerSpeed = 20.f;
-
-	// TEST CODE Zero out entities memory.
-	State.Entities = {};
 }
 
 DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
@@ -45,35 +38,7 @@ DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameDat
 	ClientSessionState& State = CastClientState(Context.PersistentMemory.Memory);
 
 	ProcessInputs(State, FrameData);
-
 	OutputDrawCalls(State, FrameData);
-
-	// TEST CODE Read in inputs and move the player.
-	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_RIGHT)] == ActionInputState::HELD)
-	{
-		State.PlayerCoordinates.x += State.PlayerSpeed * FrameData.FrameTime;
-	}
-	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_LEFT)] == ActionInputState::HELD)
-	{
-		State.PlayerCoordinates.x -= State.PlayerSpeed * FrameData.FrameTime;
-	}
-	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_DOWN)] == ActionInputState::HELD)
-	{
-		State.PlayerCoordinates.y += State.PlayerSpeed * FrameData.FrameTime;
-	}
-	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::ARROW_UP)] == ActionInputState::HELD)
-	{
-		State.PlayerCoordinates.y -= State.PlayerSpeed * FrameData.FrameTime;
-	}
-
-	if (State.Input.ActionInputStates[(uint8_t)(ActionKey::KEY_E)] == ActionInputState::UP)
-	{
-		// Spawn rectangle entity.
-		Vector2f location = State.Input.CursorLocation;
-		ColorRGBA color = { 0, 0, 255, 255 }; // Red.
-		uint8_t size = 10;
-		State.Entities.SpawnEntity(location, color, size);
-	}
 }
 
 DLL_EXPORT void ShutdownClient(ClientContext& Context)
