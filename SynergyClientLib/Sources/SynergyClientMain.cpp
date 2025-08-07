@@ -20,10 +20,10 @@ struct ClientInputState
 {
 	ActionInputState ActionInputStates[(size_t)ActionKey::ACTION_KEY_COUNT];
 
-	// Latest recorded cursor location relative to cursor viewport. TODO Associate to specific action events for greater precision.
+	// Latest recorded cursor location relative to cursor viewport.
 	Vector2s CursorLocation;
 
-	// Latest recorded viewport hovered by cursor. TODO: Same as CursorLocation.
+	// Latest recorded viewport hovered by cursor.
 	ViewportID CursorViewport;
 };
 
@@ -195,7 +195,6 @@ void ProcessInputs(ClientContext& Context, ClientFrameData& FrameData)
 		if (inputEventIndex == FrameData.InputEvents.EventCount - 1)
 		{
 			// Last event gives us the cursor position and viewport ofor this frame.
-			// TODO Change input system so each event's data is fully recorded.
 
 			State.Input.CursorLocation = event.cursorLocation;
 			State.Input.CursorViewport = event.viewport;
