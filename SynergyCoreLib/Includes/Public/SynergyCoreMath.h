@@ -1,7 +1,7 @@
 // Common Math symbols declarations.
 
 #include <stdint.h>
-#include <math.h> // Could we get rid of this at some point ?
+#include <math.h>
 
 // Core template for Vectors of 2 scalar elements.
 // Defines operator overloads.

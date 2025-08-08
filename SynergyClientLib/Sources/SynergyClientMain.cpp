@@ -26,20 +26,34 @@ DLL_EXPORT void Hello()
 DLL_EXPORT void StartClient(ClientSessionData& Context)
 {
 	std::cout << "Starting client.\n";
-	ClientSessionState& State = CastClientState(Context.PersistentMemoryBuffer.Memory);
+	ClientSessionState& ClientState = CastClientState(Context.PersistentMemoryBuffer.Memory);
+
+	// Build Client State Object
 
 	std::cout << "Allocating Main Viewport.\n";
-	State.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
+	ClientState.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
 
-	State.Input = {};
+	ClientState.Input = {};
+
+	ClientState.PersistentMemoryAllocator = MakeStackAllocator(Context.PersistentMemoryBuffer.Memory, Context.PersistentMemoryBuffer.Size);
 }
 
 DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestData& FrameData)
 {
-	ClientSessionState& State = CastClientState(Context.PersistentMemoryBuffer.Memory);
+	ClientSessionState& ClientState = CastClientState(Context.PersistentMemoryBuffer.Memory);
 
-	ProcessInputs(State, FrameData);
-	OutputDrawCalls(State, FrameData);
+	// Build Frame State object
+	ClientFrameState frameState = {};
+
+	frameState.ActionInputs = &FrameData.ActionInputEvents;
+	frameState.FrameTime = FrameData.FrameTime;
+
+	frameState.FrameMemoryAllocator = MakeStackAllocator(FrameData.FrameMemoryBuffer.Memory, FrameData.FrameMemoryBuffer.Size);
+
+	frameState.FramePlatformAPI.NewDrawCall = FrameData.NewDrawCall;
+
+	ProcessInputs(ClientState, frameState);
+	OutputDrawCalls(ClientState, frameState);
 }
 
 DLL_EXPORT void ShutdownClient(ClientSessionData& Context)

@@ -4,9 +4,9 @@ SOURCE_INC_FILE()
 
 #include "Client.h"
 
-void OutputDrawCalls(ClientSessionState& State, ClientFrameRequestData& FrameData)
+void OutputDrawCalls(ClientSessionState& State, ClientFrameState& FrameData)
 {
-	if (FrameData.NewDrawCall == nullptr)
+	if (FrameData.FramePlatformAPI.NewDrawCall == nullptr)
 	{
 		// Drawing not supported.
 		return;

@@ -1,6 +1,7 @@
 #ifndef SYNERGY_CORE_INCLUDED
 #define SYNERGY_CORE_INCLUDED
 
+#include "SynergyCoreMemory.h"
 #include "SynergyCoreMath.h"
 
 // Common defines

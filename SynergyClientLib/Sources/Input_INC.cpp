@@ -63,7 +63,7 @@ void ProcessActionInputEvents(ClientInputState& InputState, const ActionInputEve
 	}
 }
 
-void ProcessInputs(ClientSessionState& State, ClientFrameRequestData& FrameData)
+void ProcessInputs(ClientSessionState& Client, ClientFrameState& Frame)
 {
-	ProcessActionInputEvents(State.Input, FrameData.ActionInputEvents);
+	ProcessActionInputEvents(Client.Input, *Frame.ActionInputs);
 }
