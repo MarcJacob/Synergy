@@ -22,12 +22,15 @@ struct DrawCall;
 // Specific Type of a Client drawcall. Allows finding out which data structure to cast the DrawCall to.
 enum class DrawCallType; 
 
-// Base type for an Input Event. Much like drawcalls they always actually contain an underlying full datatype defined in input management code.
+// Basic Input event describing the pressing or releasing of a common key or mouse button.
 struct ActionInputEvent;
 
-// Data associated with a single frame of the Client's execution, during which it should integrate the passage of time, react to inputs
-// and output draw calls and audio samples.
-struct ClientFrameData
+// Buffer containing all Action Inputs that happened before a frame started, sorted from oldest to newest.
+struct ActionInputEventBuffer;
+
+// Data associated with a request to run a single frame of the Client's execution, during which it should 
+// integrate the passage of time, react to inputs and output draw calls and audio samples.
+struct ClientFrameRequestData
 {
 	size_t FrameNumber;
 	float FrameTime;
@@ -37,14 +40,10 @@ struct ClientFrameData
 	{
 		uint8_t* Memory;
 		size_t Size;
-	} FrameMemory;
+	} FrameMemoryBuffer;
 
 	// Input events to be processed during this frame. It is assumed the platform will have sorted the buffer from oldest to newest event.
-	struct
-	{
-		ActionInputEvent* Buffer;
-		size_t EventCount;
-	} InputEvents;
+	ActionInputEventBuffer ActionInputEvents;
 
 	// Requests the allocation of a new draw call for this frame, to be processed by the platform usually at the end of the frame.
 	// If successful returns a pointer to a base DrawCall structure with the correct underlying data type according to the passed type.
@@ -68,8 +67,8 @@ struct PlatformAPI
 	void (*DestroyViewport)(ViewportID ViewportToDestroy) = nullptr;
 };
 
-// Persistent context data for a single execution of a client. Effectively acts as the Client's static memory.
-struct ClientContext
+// Persistent session data for a single execution of a client. Effectively acts as the Client's static memory.
+struct ClientSessionData
 {
 	enum State
 	{
@@ -88,7 +87,7 @@ struct ClientContext
 	{
 		uint8_t* Memory;
 		size_t Size;
-	} PersistentMemory;
+	} PersistentMemoryBuffer;
 };
 
 // Contains function pointers associated with symbol names for easier symbol loading on the platform and to provide a centralized calling
@@ -99,14 +98,14 @@ struct SynergyClientAPI
 	void (*Hello)() = nullptr;
 
 	// Starts a new client session with the given context. The context should be in INITIALIZED state.
-	void (*StartClient)(ClientContext& Context) = nullptr;
+	void (*StartClient)(ClientSessionData& Context) = nullptr;
 
 	// Runs a single frame on the client session associated with the provided context. The context should be in RUNNING state.
 	// Frame data needs to be filled in completely.
-	void (*RunClientFrame)(ClientContext& Context, ClientFrameData& FrameData) = nullptr;
+	void (*RunClientFrame)(ClientSessionData& Context, ClientFrameRequestData& FrameData) = nullptr;
 
 	// Shuts down the client cleanly.
-	void (*ShutdownClient)(ClientContext& Context) = nullptr;
+	void (*ShutdownClient)(ClientSessionData& Context) = nullptr;
 
 	// Checks that all essential functions have been successfully loaded.
 	bool APISuccessfullyLoaded()

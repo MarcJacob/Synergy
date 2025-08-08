@@ -117,6 +117,12 @@ struct ActionInputEvent
     bool bRelease;
 };
 
+struct ActionInputEventBuffer
+{
+    ActionInputEvent* Buffer;
+    size_t EventCount;
+};
+
 enum ActionInputState
 {
     RELEASED,

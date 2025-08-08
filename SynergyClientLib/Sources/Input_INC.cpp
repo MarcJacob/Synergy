@@ -4,18 +4,19 @@ SOURCE_INC_FILE()
 
 #include "Client.h"
 
-void ProcessInputs(ClientSessionState& State, ClientFrameData& FrameData)
+// Process the Action Inputs buffer and update the Client Input State.
+void ProcessActionInputEvents(ClientInputState& InputState, const ActionInputEventBuffer& ActionInputEvents)
 {
 	// "Advance" the state of non-RELEASED inputs.
 	for (uint8_t actionKeyIndex = 0; actionKeyIndex < (uint8_t)(ActionKey::ACTION_KEY_COUNT); actionKeyIndex++)
 	{
-		switch (State.Input.ActionInputStates[actionKeyIndex])
+		switch (InputState.ActionInputStates[actionKeyIndex])
 		{
 		case(ActionInputState::UP):
-			State.Input.ActionInputStates[actionKeyIndex] = ActionInputState::RELEASED;
+			InputState.ActionInputStates[actionKeyIndex] = ActionInputState::RELEASED;
 			break;
 		case(ActionInputState::DOWN):
-			State.Input.ActionInputStates[actionKeyIndex] = ActionInputState::HELD;
+			InputState.ActionInputStates[actionKeyIndex] = ActionInputState::HELD;
 			break;
 		default:
 			break;
@@ -23,41 +24,46 @@ void ProcessInputs(ClientSessionState& State, ClientFrameData& FrameData)
 	}
 
 	// Read in Action inputs.
-	for (size_t inputEventIndex = 0; inputEventIndex < FrameData.InputEvents.EventCount; inputEventIndex++)
+	for (size_t inputEventIndex = 0; inputEventIndex < ActionInputEvents.EventCount; inputEventIndex++)
 	{
-		ActionInputEvent& event = FrameData.InputEvents.Buffer[inputEventIndex];
+		ActionInputEvent& event = ActionInputEvents.Buffer[inputEventIndex];
 
 		uint8_t keyIndex = (uint8_t)(event.key);
 
 		if (!event.bRelease)
 		{
-			switch (State.Input.ActionInputStates[keyIndex])
+			switch (InputState.ActionInputStates[keyIndex])
 			{
 			case(ActionInputState::RELEASED):
 			case(ActionInputState::UP):
-				State.Input.ActionInputStates[keyIndex] = ActionInputState::DOWN;
+				InputState.ActionInputStates[keyIndex] = ActionInputState::DOWN;
 			default:
 				break;
 			}
 		}
 		else
 		{
-			switch (State.Input.ActionInputStates[keyIndex])
+			switch (InputState.ActionInputStates[keyIndex])
 			{
 			case(ActionInputState::HELD):
 			case(ActionInputState::DOWN):
-				State.Input.ActionInputStates[keyIndex] = ActionInputState::UP;
+				InputState.ActionInputStates[keyIndex] = ActionInputState::UP;
 			default:
 				break;
 			}
 		}
 
-		if (inputEventIndex == FrameData.InputEvents.EventCount - 1)
+		if (inputEventIndex == ActionInputEvents.EventCount - 1)
 		{
 			// Last event gives us the cursor position and viewport ofor this frame.
 
-			State.Input.CursorLocation = event.cursorLocation;
-			State.Input.CursorViewport = event.viewport;
+			InputState.CursorLocation = event.cursorLocation;
+			InputState.CursorViewport = event.viewport;
 		}
 	}
+}
+
+void ProcessInputs(ClientSessionState& State, ClientFrameRequestData& FrameData)
+{
+	ProcessActionInputEvents(State.Input, FrameData.ActionInputEvents);
 }

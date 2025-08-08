@@ -23,10 +23,10 @@ DLL_EXPORT void Hello()
 	std::cout << "VERSION 0.1.1 - IN DEV\n";
 }
 
-DLL_EXPORT void StartClient(ClientContext& Context)
+DLL_EXPORT void StartClient(ClientSessionData& Context)
 {
 	std::cout << "Starting client.\n";
-	ClientSessionState& State = CastClientState(Context.PersistentMemory.Memory);
+	ClientSessionState& State = CastClientState(Context.PersistentMemoryBuffer.Memory);
 
 	std::cout << "Allocating Main Viewport.\n";
 	State.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
@@ -34,15 +34,15 @@ DLL_EXPORT void StartClient(ClientContext& Context)
 	State.Input = {};
 }
 
-DLL_EXPORT void RunClientFrame(ClientContext& Context, ClientFrameData& FrameData)
+DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestData& FrameData)
 {
-	ClientSessionState& State = CastClientState(Context.PersistentMemory.Memory);
+	ClientSessionState& State = CastClientState(Context.PersistentMemoryBuffer.Memory);
 
 	ProcessInputs(State, FrameData);
 	OutputDrawCalls(State, FrameData);
 }
 
-DLL_EXPORT void ShutdownClient(ClientContext& Context)
+DLL_EXPORT void ShutdownClient(ClientSessionData& Context)
 {
 	std::cout << "Shutting down client.\n";
 }

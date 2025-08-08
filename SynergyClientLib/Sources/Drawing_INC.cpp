@@ -4,7 +4,7 @@ SOURCE_INC_FILE()
 
 #include "Client.h"
 
-void OutputDrawCalls(ClientSessionState& State, ClientFrameData& FrameData)
+void OutputDrawCalls(ClientSessionState& State, ClientFrameRequestData& FrameData)
 {
 	if (FrameData.NewDrawCall == nullptr)
 	{

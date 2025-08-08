@@ -25,16 +25,16 @@ struct ClientSessionState
 /*
 	Processes the various input buffers sent by the platform layer to update the Client Input State.
 */
-void ProcessInputs(ClientSessionState& State, ClientFrameData& FrameData);
+void ProcessInputs(ClientSessionState& State, ClientFrameRequestData& FrameData);
 
 /*
 	Generates the UI Partition tree for a frame and performs all logical links between UI and data.
 */
-void PerformUILogicPass(ClientSessionState& State, ClientFrameData& FrameData);
+void PerformUILogicPass(ClientSessionState& State, ClientFrameRequestData& FrameData);
 
 /*
 	Generates all draw calls to render the end state of a frame. Includes UI and various dynamic elements.
 */
-void OutputDrawCalls(ClientSessionState& State, ClientFrameData& FrameData);
+void OutputDrawCalls(ClientSessionState& State, ClientFrameRequestData& FrameData);
 
 #endif // CLIENT_INCLUDED

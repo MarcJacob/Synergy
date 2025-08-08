@@ -17,4 +17,6 @@
 
 // Used at the top of INC files, to streamline checking for a defined Translation Unit the INC file is part of.
 #define SOURCE_INC_FILE() static_assert(ASSERT_RESULT, "INC File " __FILE__ " must be included within a translation unit and NOT compiled on its own !");
+
+
 #endif // SYNERGY_CORE_INCLUDED
