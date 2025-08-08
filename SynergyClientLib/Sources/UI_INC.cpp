@@ -5,7 +5,7 @@ SOURCE_INC_FILE()
 
 #include "Client.h"
 
-void BuildUITree(ClientSessionState& State, ClientFrameRequestData& FrameData)
+ClientUIPartitionNode* BuildUIPartitionTree(ClientSessionState& Client, ClientFrameState& Frame)
 {
-	// Allocate memory in the Frame	
+	return nullptr;
 }

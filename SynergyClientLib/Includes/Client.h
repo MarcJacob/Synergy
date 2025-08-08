@@ -11,12 +11,18 @@ static_assert(0, "Client.h can only be included inside the SYNERGY_CLIENT_MAIN t
 #include "SynergyClientAPI.h"
 #include "SynergyCore.h"
 
+#include "ClientUI.h"
+
 /*
 	State of the Client as a whole. Persistent memory pointer provided by the platform is cast to this.
 */
 struct ClientSessionState
 {
-	ViewportID MainViewportID;
+	struct
+	{
+		ViewportID ID;
+		Vector2s Dimensions;
+	} MainViewport;
 
 	ClientInputState Input;
 
@@ -51,9 +57,9 @@ struct ClientFrameState
 void ProcessInputs(ClientSessionState& State, ClientFrameState& FrameData);
 
 /*
-	Generates the UI Partition tree for a frame and performs all logical links between UI and data.
+	Builds the UI Partition Tree for the Main Viewport, defining every UI element and their logic.
 */
-void PerformUILogicPass(ClientSessionState& State, ClientFrameState& FrameData);
+ClientUIPartitionNode* BuildUIPartitionTree(ClientSessionState& Client, ClientFrameState& Frame);
 
 /*
 	Generates all draw calls to render the end state of a frame. Includes UI and various dynamic elements.

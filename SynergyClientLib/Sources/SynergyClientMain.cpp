@@ -31,7 +31,8 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 	// Build Client State Object
 
 	std::cout << "Allocating Main Viewport.\n";
-	ClientState.MainViewportID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
+	ClientState.MainViewport.ID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
+	ClientState.MainViewport.Dimensions = { 800, 600 };
 
 	ClientState.Input = {};
 
@@ -40,7 +41,7 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 
 DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestData& FrameData)
 {
-	ClientSessionState& ClientState = CastClientState(Context.PersistentMemoryBuffer.Memory);
+	ClientSessionState& clientState = CastClientState(Context.PersistentMemoryBuffer.Memory);
 
 	// Build Frame State object
 	ClientFrameState frameState = {};
@@ -52,8 +53,13 @@ DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestDat
 
 	frameState.FramePlatformAPI.NewDrawCall = FrameData.NewDrawCall;
 
-	ProcessInputs(ClientState, frameState);
-	OutputDrawCalls(ClientState, frameState);
+	ProcessInputs(clientState, frameState);
+	
+	// UI
+	ClientUIPartitionNode* rootPartitionNode = BuildUIPartitionTree(clientState, frameState);
+	
+		
+	OutputDrawCalls(clientState, frameState);
 }
 
 DLL_EXPORT void ShutdownClient(ClientSessionData& Context)
