@@ -36,8 +36,11 @@ struct MemoryAllocator
 {
 	ManagedBuffer Memory = {};
 
-	void Allocate(size_t Size) { InternalAllocFuncPtr(Memory, Size); }
+	void* Allocate(size_t Size) { return InternalAllocFuncPtr(Memory, Size); }
 	void Free(void* Ptr) { InternalFreeFuncPtr(Memory, Ptr); };
+
+	template<typename AllocatedType>
+	AllocatedType* Allocate(size_t Count = 1) { return (AllocatedType*)InternalAllocFuncPtr(Memory, Count * sizeof(AllocatedType)); }
 
 	typedef void* AllocationFunction(ManagedBuffer& Buffer, size_t SizeToAllocate);
 	AllocationFunction* InternalAllocFuncPtr = nullptr;

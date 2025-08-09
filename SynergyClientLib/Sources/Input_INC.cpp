@@ -52,18 +52,13 @@ void ProcessActionInputEvents(ClientInputState& InputState, const ActionInputEve
 				break;
 			}
 		}
-
-		if (inputEventIndex == ActionInputEvents.EventCount - 1)
-		{
-			// Last event gives us the cursor position and viewport ofor this frame.
-
-			InputState.CursorLocation = event.cursorLocation;
-			InputState.CursorViewport = event.viewport;
-		}
 	}
 }
 
 void ProcessInputs(ClientSessionState& Client, ClientFrameState& Frame)
 {
 	ProcessActionInputEvents(Client.Input, *Frame.ActionInputs);
+
+	Client.Input.CursorLocation = Frame.CursorLocation;
+	Client.Input.CursorViewport = Frame.CursorViewport;
 }

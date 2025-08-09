@@ -45,6 +45,12 @@ struct ClientFrameRequestData
 	// Input events to be processed during this frame. It is assumed the platform will have sorted the buffer from oldest to newest event.
 	ActionInputEventBuffer ActionInputEvents;
 
+	// Location of the cursor when the frame started.
+    Vector2s CursorLocation;
+
+    // Viewport the cursor was in when the frame started.
+    ViewportID CursorViewport;
+
 	// Requests the allocation of a new draw call for this frame, to be processed by the platform usually at the end of the frame.
 	// If successful returns a pointer to a base DrawCall structure with the correct underlying data type according to the passed type.
 	// If it fails for any reason, returns nullptr.

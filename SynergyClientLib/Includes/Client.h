@@ -27,6 +27,9 @@ struct ClientSessionState
 	ClientInputState Input;
 
 	MemoryAllocator PersistentMemoryAllocator;
+
+	// Backend state data
+	bool bButtonEnlarged = false; // Whether the button at the center of the screen was enlarged.
 };
 
 /*
@@ -46,7 +49,17 @@ struct ClientFrameState
 	{
 		DrawCall* (*NewDrawCall)(ViewportID TargetViewportID, DrawCallType Type);
 	} FramePlatformAPI;
+
+	// Location of the cursor when the frame started.
+    Vector2s CursorLocation;
+
+    // Viewport the cursor was in when the frame started.
+    ViewportID CursorViewport;
+
+	// Intermediate data generated and used by the frame, for the frame.
 	
+	// UI Partition Tree for drawing the Main Viewport's UI.
+	ClientUIPartitionTree MainViewportUITree;
 };
 
 // MAJOR PROCEDURES
@@ -59,7 +72,7 @@ void ProcessInputs(ClientSessionState& State, ClientFrameState& FrameData);
 /*
 	Builds the UI Partition Tree for the Main Viewport, defining every UI element and their logic.
 */
-ClientUIPartitionNode* BuildUIPartitionTree(ClientSessionState& Client, ClientFrameState& Frame);
+void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Frame, const bool bIsPartitionPass);
 
 /*
 	Generates all draw calls to render the end state of a frame. Includes UI and various dynamic elements.

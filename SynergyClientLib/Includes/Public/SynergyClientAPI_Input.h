@@ -140,6 +140,9 @@ struct ClientInputState
 
     // Latest recorded viewport hovered by cursor.
     ViewportID CursorViewport;
+
+    // Utility Functions
+    inline bool ActionKeyStateIs(ActionKey Key, ActionInputState State) const { return ActionInputStates[(size_t)Key] == State; }
 };
 
 #endif
