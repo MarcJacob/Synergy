@@ -1,6 +1,7 @@
 // Common Math symbols declarations.
 
 #include <stdint.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 // Core template for Vectors of 2 scalar elements.

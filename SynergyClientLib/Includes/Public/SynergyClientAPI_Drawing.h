@@ -81,9 +81,9 @@ struct EllipseDrawCallData : public DrawCall
 	union
 	{
 		// Radii towards the "sides" and "top-to-bottom" axis of the ellipse when Angle = 0.
-		Vector2f ellipticRadii;
+		Vector2s ellipticRadii;
 		// Radius of the circle.
-		float circleRadius;
+		uint16_t circleRadius;
 	};
 };
 
