@@ -30,6 +30,8 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 
 	// Build Client State Object
 
+	ClientState = {};
+
 	std::cout << "Allocating Main Viewport.\n";
 	ClientState.MainViewport.ID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
 	ClientState.MainViewport.Dimensions = { 800, 600 };
@@ -38,6 +40,9 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 
 	ClientState.PersistentMemoryAllocator = MakeStackAllocator(Context.PersistentMemoryBuffer.Memory + sizeof(ClientSessionState)
 		, Context.PersistentMemoryBuffer.Size - sizeof(ClientSessionState));
+
+	// Until we get a proper UI graphics system going, set Debug UI as enabled by default.
+	ClientState.bDrawUIDebug = true;
 }
 
 DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestData& FrameData)
@@ -59,6 +64,13 @@ DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestDat
 
 	ProcessInputs(clientState, frameState);
 	
+	// DEBUG INPUTS
+
+	if (clientState.Input.ActionKeyStateIs(ActionKey::KEY_FUNC1, ActionInputState::UP))
+	{
+		clientState.bDrawUIDebug = !clientState.bDrawUIDebug;
+	}
+
 	// UI
 	
 	// Construct UI Tree and assign it a memory allocator

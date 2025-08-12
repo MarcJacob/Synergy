@@ -30,6 +30,9 @@ struct ClientSessionState
 
 	// Backend state data
 	bool bButtonEnlarged = false; // Whether the button at the center of the screen was enlarged.
+
+	// DEBUG DATA
+	bool bDrawUIDebug = false;
 };
 
 /*

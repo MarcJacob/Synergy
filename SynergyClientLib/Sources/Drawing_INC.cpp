@@ -65,12 +65,9 @@ void OutputDrawCalls(ClientSessionState& Client, ClientFrameState& Frame)
 		return;
 	}
 
-	// Draw debug UI view.
-	DEBUG_DrawUIPartitionInteraction(Client.MainViewport.ID, Frame);
-
-	// Draw red ellipse at the top right.
-	EllipseDrawCallData* topRightEllipse = (EllipseDrawCallData*)Frame.FramePlatformAPI.NewDrawCall(Client.MainViewport.ID, DrawCallType::ELLIPSE);
-	topRightEllipse->ellipticRadii = { 50, 50 };
-	topRightEllipse->color = { 0, 0, 255, 255 }; // Red
-	topRightEllipse->origin = { 600, 500 };
+	if (Client.bDrawUIDebug)
+	{
+		// Draw debug UI view.
+		DEBUG_DrawUIPartitionInteraction(Client.MainViewport.ID, Frame);
+	}
 }
