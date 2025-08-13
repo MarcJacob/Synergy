@@ -11,6 +11,7 @@ static_assert(0, "Client.h can only be included inside the SYNERGY_CLIENT_MAIN t
 #include "SynergyClientAPI.h"
 #include "SynergyCore.h"
 
+#include "ClientDrawing.h"
 #include "ClientUI.h"
 
 /*

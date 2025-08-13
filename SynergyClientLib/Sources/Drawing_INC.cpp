@@ -23,13 +23,12 @@ void DEBUG_DrawUINode_Recursive(ViewportID Viewport, ClientFrameState& Frame, co
 {
 	// Output a rectangular draw call with the given color per depth multiplied by depth level, then recursively call on children.
 	
-	uint8_t colorIntensity = (uint8_t)(ColorPerDepth * DepthLevel);
+	uint16_t colorIntensity = (uint8_t)(ColorPerDepth * DepthLevel);
 	
 	RectangleDrawCallData* nodeRect = (RectangleDrawCallData*)Frame.FramePlatformAPI.NewDrawCall(Viewport, DrawCallType::RECTANGLE);
 	nodeRect->dimensions = Node.Dimensions;
 	nodeRect->origin = Node.RelativePosition;
-	nodeRect->color = {!Node.bIsInteracted ? colorIntensity : uint8_t(0), colorIntensity, !Node.bIsInteracted ? colorIntensity : uint8_t(0), 255};
-
+	nodeRect->color = Node.bIsInteracted ? GetColorWithIntensity(COLOR_Green, colorIntensity) : GetColorWithIntensity(COLOR_White, colorIntensity);
 	for (int childIndex = 0; childIndex < Node.ChildCount; childIndex++)
 	{
 		DEBUG_DrawUINode_Recursive(Viewport, Frame, Node.Children[childIndex], ColorPerDepth, DepthLevel + 1);

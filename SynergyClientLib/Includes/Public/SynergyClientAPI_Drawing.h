@@ -5,15 +5,19 @@
 
 #include <iostream>
 
+#include "SynergyCore.h"
+
 /*
-	Basic RGBA color structure used by the Client to understand and express colors.The platform may need to translate it to its own format,
+	Basic "inversed" RGBA color structure used by the Client to understand and express colors. The platform may need to translate it to its own format,
 	perhaps even ignoring some colors if necessary.
+	T = Transparency. At 0, the color is perfectly opaque. At 255, it is perfectly transparent. This makes it less cumbersome to write common
+	color values that are usually opaque anyway.
 */
-union ColorRGBA
+union ColorRGBT
 {
 	struct
 	{
-		uint8_t r, g, b, a;
+		uint8_t r, g, b, t;
 	};
 
 	uint32_t full;
@@ -44,7 +48,7 @@ struct DrawCall
 	// Rotation in degrees of the drawn shape.
 	uint16_t angleDeg;
 
-	ColorRGBA color;
+	ColorRGBT color;
 };
 
 /*
