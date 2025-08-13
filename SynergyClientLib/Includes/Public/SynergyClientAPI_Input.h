@@ -62,6 +62,9 @@ enum class ActionKey : uint8_t
     KEY_Y,
     KEY_Z,
     ALPHANUMERIC_LETTERS_END = KEY_Z,
+    // Let's fit misc / uncategorizable keys in here.
+    KEY_SPACE,
+    // -----
     FUNCTION_KEYS_START,
     KEY_FUNC1 = FUNCTION_KEYS_START,
     KEY_FUNC2,
@@ -82,11 +85,6 @@ enum class ActionKey : uint8_t
     ARROW_RIGHT,
     ARROW_DOWN,
     ARROW_KEYS_END = ARROW_RIGHT,
-    MODIFIER_KEYS_START,
-    MOD_CTRL = MODIFIER_KEYS_START,
-    MOD_SHIFT,
-    MOD_ALT,
-    MODIFIER_KEYS_END = MOD_ALT,
     MOUSE_BUTTONS_START,
     MOUSE_LEFT = MOUSE_BUTTONS_START,
     MOUSE_RIGHT,
@@ -109,6 +107,20 @@ struct ActionInputEvent
 
     // Location of the cursor at the time of the event.
     Vector2s cursorLocation;
+
+    // Modifier key states at the time of the event.
+    struct
+    {
+        /*
+            CTRL = bit 0
+            SHIFT = bit 1
+            ALT = bit 2
+        */
+        uint8_t modifiersBitmask;
+        inline bool CtrlPressed() const { return modifiersBitmask & 1 << 0; }
+        inline bool ShiftPressed() const { return modifiersBitmask & 1 << 1; }
+        inline bool AltPressed() const { return modifiersBitmask & 1 << 2; }
+    } modifiers;
 
     // Key or Button associated with the event.
     ActionKey key;
