@@ -13,6 +13,7 @@ static_assert(0, "Client.h can only be included inside the SYNERGY_CLIENT_MAIN t
 
 #include "ClientDrawing.h"
 #include "ClientUI.h"
+#include "ClientGraph.h"
 
 /*
 	State of the Client as a whole. Persistent memory pointer provided by the platform is cast to this.
@@ -30,7 +31,9 @@ struct ClientSessionState
 	MemoryAllocator PersistentMemoryAllocator;
 
 	// Backend state data
-	bool bButtonEnlarged = false; // Whether the button at the center of the screen was enlarged.
+
+	// State of the Synergy Graph on the client.
+	ClientGraph Graph;
 
 	// DEBUG DATA
 	bool bDrawUIDebug = false;
