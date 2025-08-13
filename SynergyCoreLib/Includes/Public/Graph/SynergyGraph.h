@@ -1,11 +1,13 @@
 // Main include for working with Synergy Node Graphs.
 
-#include <stdint>
+#include <stdint.h>
 
 // Unique identifier for a node across its entire Tree.
-typedef uint64_t SNodeGUID
+typedef uint64_t SNodeGUID;
 // Invalid Node ID used to represent non-existent nodes or invalid operation results.
 constexpr SNodeGUID SNODE_INVALID_ID = ~0;
+
+typedef char NodeName[64];
 
 /*
 	Structured representation of a node.
@@ -20,13 +22,14 @@ struct SNodeDef
 	// ID of the parent node if any.
 	SNodeGUID parentID = SNODE_INVALID_ID;
 
-	// Name of the node, not necessarily unique. Only supports ASCII characters.
-	char name[64];
+	// Name of the node. Only supports ASCII characters.
+	NodeName name;
 };
 
 // Defines the access level of a node connection.
 enum class SNodeConnectionAccessLevel
 {
+	NONE, // Default value, represents an absent connection.
 	OPEN, // OPEN connections grant access rights to the destination node if the user has access rights to the source node and are PUBLIC otherwise.
 	PUBLIC, // PUBLIC connections grant visibility to the destination node if the user has visibility of the source node.
 	INTERNAL, // INTERNAL connections are visible only if the user has access rights to the source node, and only grant visibility of the destination node.
