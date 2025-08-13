@@ -76,23 +76,14 @@ struct PlatformAPI
 // Persistent session data for a single execution of a client. Effectively acts as the Client's static memory.
 struct ClientSessionData
 {
-	enum State
-	{
-		INITIALIZED,
-		RUNNING,
-		ENDED
-	};
-
-	State State;
-
 	// Underlying Platform API, usable at any point by the client and guaranteed to be thread-safe when relevant.
 	PlatformAPI Platform;
 
 	// Memory guaranteed to be persistent from the moment the client starts to when it shuts down.
 	struct
 	{
-		uint8_t* Memory;
-		size_t Size;
+		uint8_t* Memory = nullptr;
+		size_t Size = 0;
 	} PersistentMemoryBuffer;
 };
 
