@@ -7,6 +7,7 @@
 #include <iostream>
 
 // Source includes
+#include "Graph_INC.cpp"
 #include "Input_INC.cpp"
 #include "UI_INC.cpp"
 #include "Drawing_INC.cpp"
@@ -26,23 +27,48 @@ DLL_EXPORT void Hello()
 DLL_EXPORT void StartClient(ClientSessionData& Context)
 {
 	std::cout << "Starting client.\n";
-	ClientSessionState& ClientState = CastClientState(Context.PersistentMemoryBuffer.Memory);
+	ClientSessionState& Client = CastClientState(Context.PersistentMemoryBuffer.Memory);
 
 	// Build Client State Object
 
-	ClientState = {};
+	Client = {};
 
 	std::cout << "Allocating Main Viewport.\n";
-	ClientState.MainViewport.ID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
-	ClientState.MainViewport.Dimensions = { 800, 600 };
+	Client.MainViewport.ID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
+	Client.MainViewport.Dimensions = { 800, 600 };
 
-	ClientState.Input = {};
+	Client.Input = {};
 
-	ClientState.PersistentMemoryAllocator = MakeStackAllocator(Context.PersistentMemoryBuffer.Memory + sizeof(ClientSessionState)
+	Client.PersistentMemoryAllocator = MakeStackAllocator(Context.PersistentMemoryBuffer.Memory + sizeof(ClientSessionState)
 		, Context.PersistentMemoryBuffer.Size - sizeof(ClientSessionState));
 
 	// Until we get a proper UI graphics system going, set Debug UI as enabled by default.
-	ClientState.bDrawUIDebug = true;
+	Client.bDrawUIDebug = true;
+
+	// Allocate Graph from persistent memory.
+	Client.Graph = Client.PersistentMemoryAllocator.Allocate<ClientGraph>();
+
+	// Build a simple graph to test.
+	ClientGraphEditTransaction initTransaction;
+
+	
+	// Root Node
+	ClientGraphEditTransaction::Node* root = initTransaction.CreateNode({ Client.Graph->RootNodeID, SNODE_INVALID_ID, "Root" }, nullptr);
+
+	// Two direct children
+	ClientGraphEditTransaction::Node* child1 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 1" }, root);
+	ClientGraphEditTransaction::Node* child2 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 2" }, root);
+
+	// One grandchild, child of Child 2
+	ClientGraphEditTransaction::Node* child2_1 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Childe 2 - 1" }, child2);
+
+	// Monodirectional connection from grandchild to child 1
+	initTransaction.AddOrEditConnection(child2_1, child1, { SNODE_INVALID_ID, SNODE_INVALID_ID, SNodeConnectionAccessLevel::PUBLIC });
+
+	if (!Client.Graph->ApplyEditTransaction(initTransaction))
+	{
+		std::cerr << "Error when applying Init Transaction to Client Graph !\n";
+	}
 }
 
 DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestData& FrameData)

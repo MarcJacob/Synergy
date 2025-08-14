@@ -1,6 +1,10 @@
 // Contains symbols that outline how the Client models its own view of the Graph they are currently working on while connected to a server.
 
+#ifndef CLIENT_GRAPH_INCLUDED
+#define CLIENT_GRAPH_INCLUDED
+
 #include "Graph/SynergyGraph.h"
+#include "SynergyCore.h"
 
 // The Client essentially needs to try and predict where the user will attempt to travel to next on the graph and keep that data quickly
 // accessible, while also providing a potentially very large storage capacity for large graphs, with our without the help of a server.
@@ -13,10 +17,137 @@
 // Core Data making up a Node.
 struct NodeCoreData
 {
+	// Display name of the node.
 	NodeName name;
-	Vector2i coordinates;
+};
 
-	SNodeGUID parentNodeID;
+struct ClientGraph;
+
+enum class EditOperationType
+{
+	INVALID,
+	FETCH,
+	NODE_NEW,
+	NODE_EDIT,
+	NODE_DELETE,
+	CONNECTION_CREATE_EDIT,
+	CONNECTION_DELETE
+};
+
+// Abtract data structure for an operation in a Client Graph Edit Transaction. Links to next and previous operation if any.
+struct GraphEditOp_Base
+{
+	EditOperationType type;
+	GraphEditOp_Base* previous;
+	GraphEditOp_Base* next;
+};
+
+struct GraphEditOp_Fetch : public GraphEditOp_Base
+{
+	SNodeGUID fetchedNodeID;
+};
+
+// Data structure specifying the new state of a created or existing node.
+struct GraphEditOp_NodeNewEdit : public GraphEditOp_Base
+{
+	SNodeDef def;
+};
+
+/*
+	Contains a set of operations to perform and the necessary data to build connections involving nodes created during the transaction.
+	TODO The system can be made simpler once a arbitrary memory allocator is implemented.
+*/
+struct ClientGraphEditTransaction
+{
+	ClientGraph* TargetGraph = nullptr;
+
+	struct Node
+	{
+		SNodeGUID ID = SNODE_INVALID_ID; // Invalid == New node.
+		bool bDeleted = false;
+		
+		Node* Parent = nullptr;
+		SNodeConnectionAccessLevel AccessLevelToParent;
+		SNodeConnectionAccessLevel AccessLevelFromParent;
+
+		// Hints for node data to store when transaction is applied. Not all fields may be relevant.
+		SNodeDef NodeDef;
+	};
+
+	struct Connection
+	{
+		Node* Src = nullptr;
+		Node* Dest = nullptr;
+
+		SNodeConnectionAccessLevel AccessLevel;
+
+	};
+
+	// Memory the allocator may use for its common o
+	MemoryAllocator TransactionOperationsMemory;
+
+	// Linked list of generated operations for this transaction.
+	// Every new operation should be allocated from the Operations Memory.
+	GraphEditOp_Base* OperationsList = nullptr;
+
+	// Total number of generated operations. Used to double-check the validity of the transaction when applying it.
+	size_t OperationsCount = 0;
+
+	Node FetchedNodes[32];
+	Node CreatedNodes[32];
+
+	Connection FetchedConnections[32 * 32];
+	Connection CreatedConnections[32 * 32];
+
+	/*
+		Loads an existing node from the parent graph so it may be involved in the transaction.
+	*/ 
+	Node* FetchGraphNode(SNodeGUID NodeID);
+
+	/*
+		Creates a new node with the passed definition.
+		Def Parent ID not taken into account. Node ID should be defined if editing an existing node.
+	*/
+	Node* CreateNode(SNodeDef NewNodeDef, Node* Parent);
+
+	/*
+		Edits a node that was fetched or created earlier in the transaction.
+	*/
+	void EditNode(SNodeDef NewNodeDef, Node* TargetNode, Node* NewParent = nullptr);
+
+	/*
+		Deletes a node from the transaction.
+		If the node was present on the graph before the transaction, will record the node's ID not existing as a post-requisite of the transaction. 
+	*/
+	void DeleteNode(Node* ToBeDeleted);
+
+	/*
+		Adds or edits a connection from a source node to a target node based on the passed connection def.
+	*/
+	void AddOrEditConnection(Node* SourceNode, Node* TargetNode, SNodeConnectionDef ConnectionDef);
+
+	/*
+		Deletes the connection from the Source node to the Target node.
+	*/
+	void DeleteConnection(Node* SourceNode, Node* TargetNode);
+};
+
+/*
+	Statically defined Data Store for a client graph's nodal data.
+*/
+template<size_t MaxNodeCount>
+struct StaticClientGraphDataStore
+{
+	// Core Data datastore for stored nodes. Supports up to a certain amount of nodes at once. Empty slots are marked starting with a 0.
+	// Slot in the store corresponds to the Node's GUID.
+	NodeCoreData _StaticNodeCoreDataStore[MaxNodeCount];
+
+	// Access Level matrix between all stored nodes. To be updated after every edit operation.
+	SNodeConnectionAccessLevel _StaticAccessLevelMatrix[MaxNodeCount * MaxNodeCount];
+
+	constexpr size_t GetMaxNodeCount() const { return MaxNodeCount; }
+
+	SNodeGUID FindAvailableID() const;
 };
 
 /*
@@ -26,31 +157,35 @@ struct NodeCoreData
 struct ClientGraph
 {
 	/*
-		Returns a structured representation of a node's core definition data from its ID.
-		StartNodeID, if set, gives the system a hint on where to start the search.
-	*/ 
+	Returns a structured representation of a node's core definition data from its ID.
+	StartNodeID, if set, gives the system a hint on where to start the search.
+	*/
 	SNodeDef GetNodeDef(SNodeGUID NodeID, SNodeGUID StartNodeID = SNODE_INVALID_ID);
 
 	/*
 		Returns a structured representation of a node's core definition data from its Name.
 		StartNodeID, if set, gives the system a hint on where to start the search.
 		If the graph contains multiple nodes with the same name, the first one found is returned.
-	*/ 
+	*/
 	SNodeDef GetNodeDef(NodeName Name, SNodeGUID StartNodeID = SNODE_INVALID_ID);
 
 	// Returns the connections from the passed Node ID. Returns the total amount of connections.
 	size_t GetNodeConnections(SNodeGUID NodeID, SNodeConnectionDef* NodeConnectionsBuffer, size_t NodeIDBufferSize);
 
-	// Creates a new node or updates an existing one to match the passed info.
-	// #TODO To be replaced with an appropriate transaction-based system.
-	void CreateOrUpdateNode(SNodeDef Def, SNodeConnectionDef* Connections, size_t ConnectionCount);
+	/*
+		Attempts to apply the passed transaction.
+		Will mutate the transaction to facilitate its application.
+	*/
+	bool ApplyEditTransaction(ClientGraphEditTransaction& TransactionToApply);
 
-	MemoryAllocator GraphMemory;
+	// Node ID for Root Node of the Graph, which is the only node that can have no parent.
+	SNodeGUID RootNodeID = 0;
 
-	// Core Data datastore for stored nodes. Supports up to a certain amount of nodes at once. Empty slots are marked starting with a 0.
-	// Slot in the store corresponds to the Node's GUID.
-	NodeCoreData NodeCoreDataStore[16];
-
-	// Access Level matrix between all stored nodes.
-	SNodeConnectionAccessLevel AccessLevelMatrix[16 * 16];
+	/*
+		Data Store for the Graph.In the spirit of keeping it simple for now, we just use a static data store with a predefined max size.
+		Later this will probably be abstracted away with a type that simply exposes function pointers for access to various elements.
+	*/
+	StaticClientGraphDataStore<16> DataStore;
 };
+
+#endif

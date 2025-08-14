@@ -1,5 +1,8 @@
 // Main include for working with Synergy Node Graphs.
 
+#ifndef SYNERGY_GRAPH_INCLUDED
+#define SYNERGY_GRAPH_INCLUDED
+
 #include <stdint.h>
 
 // Unique identifier for a node across its entire Tree.
@@ -17,12 +20,12 @@ typedef char NodeName[64];
 struct SNodeDef
 {
 	// Unique identifier for this node within its Tree.
-	SNodeGUID id = SNODE_INVALID_ID;
+	SNodeGUID id;
 
 	// ID of the parent node if any.
-	SNodeGUID parentID = SNODE_INVALID_ID;
+	SNodeGUID parentID;
 
-	// Name of the node. Only supports ASCII characters.
+	// Name of the node.
 	NodeName name;
 };
 
@@ -30,10 +33,10 @@ struct SNodeDef
 enum class SNodeConnectionAccessLevel
 {
 	NONE, // Default value, represents an absent connection.
-	OPEN, // OPEN connections grant access rights to the destination node if the user has access rights to the source node and are PUBLIC otherwise.
-	PUBLIC, // PUBLIC connections grant visibility to the destination node if the user has visibility of the source node.
-	INTERNAL, // INTERNAL connections are visible only if the user has access rights to the source node, and only grant visibility of the destination node.
 	PRIVATE, // PRIVATE connections are visible only if the user has access rights to both the source and destination node.
+	INTERNAL, // INTERNAL connections are visible only if the user has access rights to the source node, and only grant visibility of the destination node.
+	PUBLIC, // PUBLIC connections grant visibility to the destination node if the user has visibility of the source node.
+	OPEN, // OPEN connections grant access rights to the destination node if the user has access rights to the source node and are PUBLIC otherwise.
 };
 
 /*
@@ -45,12 +48,14 @@ enum class SNodeConnectionAccessLevel
 */
 struct SNodeConnectionDef
 {
+	// Partner nodes of this connection.
+	SNodeGUID nodeID_Src, nodeID_Dest;
+
 	// Access level granted by this connection.
 	SNodeConnectionAccessLevel accessLevel = SNodeConnectionAccessLevel::OPEN;
-	
-	// Partner nodes of this connection.
-	SNodeGUID nodeID_A, nodeID_B;
 
 	// Whether this connection is a Parent-Child connection.
 	bool bIsParentChildConnection = false;
 };
+
+#endif

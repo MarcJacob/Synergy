@@ -33,7 +33,7 @@ struct ClientSessionState
 	// Backend state data
 
 	// State of the Synergy Graph on the client.
-	ClientGraph Graph;
+	ClientGraph* Graph;
 
 	// DEBUG DATA
 	bool bDrawUIDebug = false;

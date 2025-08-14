@@ -83,35 +83,5 @@ void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Fra
 			Tree.RootNode->Dimensions = Client.MainViewport.Dimensions;
 		}
 		ClientUIPartitionNode& root = *Tree.RootNode;
-
-		// Create one child button in the middle of the screen.
-		AllocChildren(root, 1);
-
-		ClientUIPartitionNode& centerButton = root.Children[0];
-		// CENTER BUTTON
-		{
-			// Button can either be enlarged or not, which is part of the persistent client state.
-			Vector2s normalSize = { 200, 200 };
-			Vector2s enlargedSize = { 400, 400 };
-			
-			centerButton.Dimensions = Client.bButtonEnlarged ? enlargedSize : normalSize;
-			
-			// If interacted with, output a message on screen.
-			if (centerButton.bIsInteracted && !Client.bButtonEnlarged)
-			{
-				if (Client.Input.ActionKeyStateIs(ActionKey::MOUSE_LEFT, ActionInputState::UP))
-				{
-					std::cout << "The button was interacted with !!! It shall GROW.\n";
-					Client.bButtonEnlarged = true;
-				}
-			}
-			else if (bIsInteractionPass && !centerButton.bIsInteracted)
-			{
-				Client.bButtonEnlarged = false;
-			}
-
-			// Place it so its center lies at the center of its parent.
-			centerButton.RelativePosition = centerButton.Parent->Dimensions / 2 - centerButton.Dimensions / 2;
-		}
 	}
 }
