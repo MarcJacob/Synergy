@@ -74,6 +74,11 @@ struct ClientGraphEditTransaction
 		SNodeDef NodeDef;
 	};
 
+	/*
+		"Deployed" wrapper around a connection definition, giving direct pointer access to involved Nodes in the transaction if any.
+		By the end of the transaction construction Source HAS to be defined, and Destination unless connection was fetched and contains
+		a valid destination ID.
+	*/
 	struct Connection
 	{
 		Node* Src = nullptr;
@@ -81,6 +86,7 @@ struct ClientGraphEditTransaction
 
 		SNodeConnectionAccessLevel AccessLevel;
 
+		SNodeConnectionDef FetchedDef;
 	};
 
 	// Memory the allocator may use for its common o
@@ -88,7 +94,8 @@ struct ClientGraphEditTransaction
 
 	// Linked list of generated operations for this transaction.
 	// Every new operation should be allocated from the Operations Memory.
-	GraphEditOp_Base* OperationsList = nullptr;
+	GraphEditOp_Base* OperationsListBegin = nullptr;
+	GraphEditOp_Base* OperationsListEnd = nullptr;
 
 	// Total number of generated operations. Used to double-check the validity of the transaction when applying it.
 	size_t OperationsCount = 0;
@@ -101,35 +108,48 @@ struct ClientGraphEditTransaction
 
 	/*
 		Loads an existing node from the parent graph so it may be involved in the transaction.
+		Returns the fetched node within the transaction, usable to create other nodes or edit it conditionally.
 	*/ 
 	Node* FetchGraphNode(SNodeGUID NodeID);
 
 	/*
 		Creates a new node with the passed definition.
 		Def Parent ID not taken into account. Node ID should be defined if editing an existing node.
+		Returns the newly created node within the transaction, usable to create further nodes or edit it conditionally.
 	*/
 	Node* CreateNode(SNodeDef NewNodeDef, Node* Parent);
 
 	/*
 		Edits a node that was fetched or created earlier in the transaction.
+		Returns whether the operation was successfully added.
 	*/
-	void EditNode(SNodeDef NewNodeDef, Node* TargetNode, Node* NewParent = nullptr);
+	bool EditNode(SNodeDef NewNodeDef, Node* TargetNode, Node* NewParent = nullptr);
 
 	/*
 		Deletes a node from the transaction.
 		If the node was present on the graph before the transaction, will record the node's ID not existing as a post-requisite of the transaction. 
+		Returns whether the operation was successfully added.
 	*/
-	void DeleteNode(Node* ToBeDeleted);
+	bool DeleteNode(Node* ToBeDeleted);
 
 	/*
 		Adds or edits a connection from a source node to a target node based on the passed connection def.
+		Returns whether the operation was successfully added.
 	*/
-	void AddOrEditConnection(Node* SourceNode, Node* TargetNode, SNodeConnectionDef ConnectionDef);
+	bool AddOrEditConnection(Node* SourceNode, Node* TargetNode, SNodeConnectionDef ConnectionDef);
 
 	/*
 		Deletes the connection from the Source node to the Target node.
+		Returns whether the operation was successfully added.
 	*/
-	void DeleteConnection(Node* SourceNode, Node* TargetNode);
+	bool DeleteConnection(Node* SourceNode, Node* TargetNode);
+
+	/*
+		Direct addition of an operation to the operation collection.
+		It is not recommended to do so but rather make use of the other functions available which maintain an internal
+		"deployed" graph that guarantees operational integrity of the transaction.
+	*/
+	void AddOperation(GraphEditOp_Base* NewOp);
 };
 
 /*
