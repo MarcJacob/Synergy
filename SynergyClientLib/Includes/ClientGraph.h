@@ -50,7 +50,11 @@ struct GraphEditOp_Fetch : public GraphEditOp_Base
 // Data structure specifying the new state of a created or existing node.
 struct GraphEditOp_NodeNewEdit : public GraphEditOp_Base
 {
+	// Definition data for the node after creation or edition.
 	SNodeDef def;
+
+	// Only relevant for new nodes. Their ID within the Created Nodes collection of the Transaction.
+	SNodeGUID createdNodeIndex;
 };
 
 /*
@@ -65,7 +69,8 @@ struct ClientGraphEditTransaction
 	{
 		SNodeGUID ID = SNODE_INVALID_ID; // Invalid == New node.
 		bool bDeleted = false;
-		
+		bool bFetched = false;
+
 		Node* Parent = nullptr;
 		SNodeConnectionAccessLevel AccessLevelToParent;
 		SNodeConnectionAccessLevel AccessLevelFromParent;
@@ -87,6 +92,8 @@ struct ClientGraphEditTransaction
 		SNodeConnectionAccessLevel AccessLevel;
 
 		SNodeConnectionDef FetchedDef;
+
+		bool bDeleted = false;
 	};
 
 	// Memory the allocator may use for its common o
