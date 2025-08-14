@@ -30,13 +30,16 @@ struct SNodeDef
 };
 
 // Defines the access level of a node connection.
-enum class SNodeConnectionAccessLevel
+enum class SNodeConnectionAccessLevel : uint8_t
 {
 	NONE, // Default value, represents an absent connection.
 	PRIVATE, // PRIVATE connections are visible only if the user has access rights to both the source and destination node.
 	INTERNAL, // INTERNAL connections are visible only if the user has access rights to the source node, and only grant visibility of the destination node.
 	PUBLIC, // PUBLIC connections grant visibility to the destination node if the user has visibility of the source node.
 	OPEN, // OPEN connections grant access rights to the destination node if the user has access rights to the source node and are PUBLIC otherwise.
+
+	TO_CHILD_MINIMUM = PRIVATE,
+	TO_PARENT_MINIMUM = PUBLIC,
 };
 
 /*

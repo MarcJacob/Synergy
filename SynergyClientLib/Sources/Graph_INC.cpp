@@ -5,7 +5,7 @@ SOURCE_INC_FILE()
 #include "SynergyCore.h"
 #include "ClientGraph.h"
 
-ClientGraphEditTransaction::Node* ClientGraphEditTransaction::FetchGraphNode(SNodeGUID NodeID)
+GraphEditNode* ClientGraphEditTransaction::FetchGraphNode(SNodeGUID NodeID)
 {
 	if (TargetGraph == nullptr)
 	{
@@ -20,7 +20,7 @@ ClientGraphEditTransaction::Node* ClientGraphEditTransaction::FetchGraphNode(SNo
 	*/
 
 	size_t fetchedNodeIndex;
-	for (fetchedNodeIndex = 0; fetchedNodeIndex < sizeof(FetchedNodes) / sizeof(Node); fetchedNodeIndex++)
+	for (fetchedNodeIndex = 0; fetchedNodeIndex < sizeof(FetchedNodes) / sizeof(GraphEditNode); fetchedNodeIndex++)
 	{
 		if (FetchedNodes[fetchedNodeIndex].ID == SNODE_INVALID_ID)
 		{
@@ -28,13 +28,13 @@ ClientGraphEditTransaction::Node* ClientGraphEditTransaction::FetchGraphNode(SNo
 		}
 	}
 
-	if (fetchedNodeIndex == sizeof(FetchedNodes) / sizeof(Node))
+	if (fetchedNodeIndex == sizeof(FetchedNodes) / sizeof(GraphEditNode))
 	{
 		// ASSERT Not enough room to fetch more nodes.
 		return nullptr;
 	}
 	
-	Node& newFetchedNode = FetchedNodes[fetchedNodeIndex];
+	GraphEditNode& newFetchedNode = FetchedNodes[fetchedNodeIndex];
 	SNodeDef fetchedDef = TargetGraph->GetNodeDef(NodeID);
 
 	if (fetchedDef.id != NodeID)
@@ -44,84 +44,109 @@ ClientGraphEditTransaction::Node* ClientGraphEditTransaction::FetchGraphNode(SNo
 	}
 
 	newFetchedNode.ID = NodeID;
-	newFetchedNode.Parent = nullptr; // Fetched nodes are not assigned a parent in the transaction's internal hierarchy.
+	newFetchedNode.Parent = nullptr; // Fetched nodes are not assigned a parent in the transaction's internal hierarchy until their parent node gets fetched as well.
 	newFetchedNode.NodeDef = fetchedDef;
 	newFetchedNode.bDeleted = false;
 
 	// Fetch this node's connections from data store and set them up in the transaction data, 
 	// updating existing nodes in the transaction as well if any of them define a parent - child relationship.
 	
-	SNodeConnectionDef connectionsBuffer[32]; // For simplicity we just assume no node has more than 32 outgoing connections.
-	size_t connectionCount = TargetGraph->GetNodeConnections(NodeID, connectionsBuffer, sizeof(connectionsBuffer) / sizeof(SNodeConnectionDef));
+	SNodeConnectionDef connectionsBuffer[32]; // For simplicity we just assume no node has more than 32 outgoing AND incoming connections, meaning
+	// we support a maximum of 16 connected nodes including parent and children.
+
+	size_t connectionCount = TargetGraph->GetNodeConnections_Bidirectional(NodeID, connectionsBuffer, sizeof(connectionsBuffer) / sizeof(SNodeConnectionDef));
 
 	for (size_t connectionIndex = 0; connectionIndex < connectionCount; connectionIndex++)
 	{
-		SNodeConnectionDef& connection = connectionsBuffer[connectionIndex];
-		SNodeGUID targetNodeID = connection.nodeID_Dest;
+		SNodeConnectionDef& connectionDef = connectionsBuffer[connectionIndex];
 		
-		// See if the target node was fetched beforehand. If it was, related info can be updated.
-		Node* targetNode = nullptr;
+		// See if the partner node was fetched beforehand. If it was, the connection should already have been fetched and will be updated in the next step.
+		GraphEditNode* partnerNode = nullptr;
+		bool bIncomingConnection = false;
+		for (GraphEditNode& fetchedNode : FetchedNodes)
 		{
-
-			for (Node& fetchedNode : FetchedNodes)
+			// OUTGOING connection.
+			if (fetchedNode.ID == connectionDef.nodeID_Dest)
 			{
-				if (fetchedNode.ID == connection.nodeID_Dest)
-				{
-					targetNode = &fetchedNode;
-					break;
-				}
+				partnerNode = &fetchedNode;
+				break;
 			}
 
-			// Update parentage
-			if (targetNode != nullptr && connection.bIsParentChildConnection)
+			// INCOMING connection.
+			if (fetchedNode.ID == connectionDef.nodeID_Src)
 			{
-				if (fetchedDef.parentID == targetNode->ID)
-				{
-					fetched.Parent = targetNode;
-				}
-				else
-				{
-					targetNode->Parent = &fetched;
-				}
-			}
-		}
-
-		// Register the connection in the transaction.
-		
-		size_t fetchedConnectionIndex;
-		for (fetchedConnectionIndex = 0; fetchedConnectionIndex < sizeof(FetchedConnections) / sizeof(Connection); fetchedConnectionIndex++)
-		{
-			if (FetchedConnections[fetchedConnectionIndex].Src == nullptr)
-			{
+				partnerNode = &fetchedNode;
+				bIncomingConnection = true;
 				break;
 			}
 		}
 
-		if (fetchedConnectionIndex == sizeof(FetchedConnections) / sizeof(Connection))
+		// If partner node was fetched beforehand and the connection is a parent / child connection, update parent - child relationship data accordingly.
+		if (partnerNode != nullptr && connectionDef.bIsParentChildConnection)
 		{
-			// ASSERT Not enough room to fetch more nodes.
-			return nullptr;
+			if (newFetchedNode.NodeDef.parentID == partnerNode->ID)
+			{
+				newFetchedNode.Parent = partnerNode;
+				newFetchedNode.AccessLevelToParent = connectionDef.accessLevel;
+			}
+			else
+			{
+				partnerNode->Parent = &newFetchedNode;
+				partnerNode->AccessLevelFromParent = connectionDef.accessLevel;
+			}
 		}
 		
-		Connection& newFetchedConnection = FetchedConnections[fetchedConnectionIndex];
 
-		newFetchedConnection.AccessLevel = connection.accessLevel;
-		newFetchedConnection.Src = &newFetchedNode;
-		newFetchedConnection.Dest = targetNode;
-		newFetchedConnection.FetchedDef = connection;
+		// If however the partner node wasn't already fetched, then this is a brand new connection from the Transaction's perpective and needs
+		// to be recorded.
+		if (partnerNode == nullptr)
+		{
+			size_t fetchedConnectionIndex;
+			for (fetchedConnectionIndex = 0; fetchedConnectionIndex < sizeof(FetchedConnections) / sizeof(GraphEditConnection); fetchedConnectionIndex++)
+			{
+				if (FetchedConnections[fetchedConnectionIndex].Src == nullptr)
+				{
+					break;
+				}
+			}
+
+			if (fetchedConnectionIndex == sizeof(FetchedConnections) / sizeof(GraphEditConnection))
+			{
+				// ASSERT Not enough room to fetch more nodes.
+				return nullptr;
+			}
+			
+			GraphEditConnection& newFetchedConnection = FetchedConnections[fetchedConnectionIndex];
+			newFetchedConnection.Src = bIncomingConnection ? partnerNode : &newFetchedNode;
+			newFetchedConnection.Dest = bIncomingConnection ? &newFetchedNode : partnerNode;
+			newFetchedConnection.Def = connectionDef;
+		}
+	}
+
+	// Update fetched connections in case they point to the newly fetched node as destination or source.
+	for(GraphEditConnection& connection : FetchedConnections)
+	{
+		if (connection.Def.nodeID_Dest == newFetchedNode.ID)
+		{
+			connection.Dest = &newFetchedNode;
+		}
+		else if (connection.Def.nodeID_Src == newFetchedNode.ID)
+		{
+			connection.Src = &newFetchedNode;
+		}
 	}
 
 	// Add a new operation to the operation collection.
 	GraphEditOp_Fetch* newFetchOp = TransactionOperationsMemory.Allocate<GraphEditOp_Fetch>();
 	newFetchOp->type = EditOperationType::FETCH;
-	newFetchOp->fetchedNodeID = newFetchedNode.ID;
+	newFetchOp->fetchedGraphNode = &newFetchedNode;
 
-	AddOperation(newFetchOp);
+	_AddOperation(*newFetchOp);
 
 	return &newFetchedNode;
 }
 
-ClientGraphEditTransaction::Node* ClientGraphEditTransaction::CreateNode(SNodeDef NewNodeDef, ClientGraphEditTransaction::Node* Parent)
+GraphEditNode* ClientGraphEditTransaction::CreateNode(SNodeDef NewNodeDef, GraphEditNode* Parent)
 {
 	if (TargetGraph == nullptr)
 	{
@@ -135,21 +160,22 @@ ClientGraphEditTransaction::Node* ClientGraphEditTransaction::CreateNode(SNodeDe
 	*/
 
 	size_t createdNodeIndex;
-	for (createdNodeIndex = 0; createdNodeIndex < sizeof(CreatedNodes) / sizeof(Node); createdNodeIndex++)
+	for (createdNodeIndex = 0; createdNodeIndex < sizeof(CreatedNodes) / sizeof(GraphEditNode); createdNodeIndex++)
 	{
-		if (CreatedNodes[createdNodeIndex].ID == SNODE_INVALID_ID)
+		if (CreatedNodes[createdNodeIndex].ID == SNODE_INVALID_ID
+		&& CreatedNodes[createdNodeIndex].AccessLevelFromParent == SNodeConnectionAccessLevel::NONE)
 		{
 			break;
 		}
 	}
 
-	if (createdNodeIndex == sizeof(CreatedNodes) / sizeof(Node))
+	if (createdNodeIndex == sizeof(CreatedNodes) / sizeof(GraphEditNode))
 	{
 		// ASSERT Not enough room to fetch more nodes.
 		return nullptr;
 	}
 
-	Node& newCreatedNode = CreatedNodes[createdNodeIndex];
+	GraphEditNode& newCreatedNode = CreatedNodes[createdNodeIndex];
 
 	newCreatedNode.ID = SNODE_INVALID_ID; // Created Node don't get an ID, it will get assigned as the transaction is processed.
 	newCreatedNode.bDeleted = false;
@@ -167,14 +193,16 @@ ClientGraphEditTransaction::Node* ClientGraphEditTransaction::CreateNode(SNodeDe
 	GraphEditOp_NodeNewEdit* newNewOp = TransactionOperationsMemory.Allocate<GraphEditOp_NodeNewEdit>();
 	newNewOp->type = EditOperationType::NODE_NEW;
 	newNewOp->def = newCreatedNode.NodeDef;
-	newNewOp->createdNodeIndex = createdNodeIndex;
+	newNewOp->target = &newCreatedNode;
+	newNewOp->parent = Parent;
 
-	AddOperation(newNewOp);
+	_AddOperation(*newNewOp);
 
 	return &newCreatedNode;
 }
 
-bool ClientGraphEditTransaction::EditNode(SNodeDef NewNodeDef, ClientGraphEditTransaction::Node* TargetNode, ClientGraphEditTransaction::Node* NewParent)
+bool ClientGraphEditTransaction::EditNode( GraphEditNode& TargetNode, SNodeDef NewNodeDef, GraphEditNode* NewParent,
+					SNodeConnectionAccessLevel AccessToParent, SNodeConnectionAccessLevel AccessFromParent)
 {
 	if (TargetGraph == nullptr)
 	{
@@ -187,53 +215,39 @@ bool ClientGraphEditTransaction::EditNode(SNodeDef NewNodeDef, ClientGraphEditTr
 		Add a corresponding NODE_EDIT operation in the operation collection.
 	*/
 
-	if (TargetNode == nullptr)
-	{
-		// ASSERT Target node was not assigned. It must be created or fetched first !
-		return false;
-	}
-
-	Node& editedNode = *TargetNode;
-
-	// If changing the parent, check that it is a valid operation and delete existing parent - child connection if need be.
+	// If changing the parent, check that it is a valid operation.
 	if (NewParent != nullptr)
 	{
-		if (editedNode.ID == TargetGraph->RootNodeID)
+		if (TargetNode.ID == TargetGraph->RootNodeID)
 		{
 			// ASSERT The root node cannot be assigned a parent !
 			return false;
 		}
 
-		if (editedNode.bFetched)
-		{
-			// Changing the parentage of a fetched node requires the previous AND new parent to be fetched as well.
-			if (editedNode.Parent == nullptr)
-			{
-				// ASSERT The previous parent needs to be fetched !
-			}
-			else
-			{
-				// Delete connection between the two parent - child fetched nodes directly.
-				DeleteConnection(TargetNode, editedNode.Parent); // Deleting a parent / child connection deletes the symmetrical connection as well.
-			}
-		}
-		editedNode.Parent = NewParent;
+		TargetNode.Parent = NewParent;
+		TargetNode.AccessLevelFromParent = AccessFromParent;
+		TargetNode.AccessLevelToParent = AccessToParent;
+
+		// Updating connections is not necessary as they will be implicitly deleted and created when the operation is processed.
 	}
 
 	// Assign new definition data.
-	editedNode.NodeDef = NewNodeDef;
+	TargetNode.NodeDef = NewNodeDef;
+	TargetNode.NodeDef.parentID = TargetNode.Parent != nullptr ? TargetNode.Parent->ID : SNODE_INVALID_ID; 
 
 	// Add Edit operation to the transaction operation container.
 	GraphEditOp_NodeNewEdit* newEditOp = TransactionOperationsMemory.Allocate<GraphEditOp_NodeNewEdit>();
 	newEditOp->type = EditOperationType::NODE_EDIT;
-	newEditOp->def = NewNodeDef;
-
-	AddOperation(newEditOp);
+	newEditOp->def = TargetNode.NodeDef;
+	newEditOp->target = &TargetNode;
+	newEditOp->parent = NewParent;
+	
+	_AddOperation(*newEditOp);
 
 	return true;
 }
 
-bool ClientGraphEditTransaction::DeleteNode(ClientGraphEditTransaction::Node* ToBeDeleted)
+bool ClientGraphEditTransaction::DeleteNode(GraphEditNode& ToBeDeleted)
 {
 	if (TargetGraph == nullptr)
 	{
@@ -244,10 +258,60 @@ bool ClientGraphEditTransaction::DeleteNode(ClientGraphEditTransaction::Node* To
 		Set the bIsDeleted flag of the target node to true.
 		Add a corresponding NODE_DELETE operation in the operation collection.
 	*/
+
+	ToBeDeleted.bDeleted = true;
+
+	// Perform a recursive delete operation on all child nodes. Fetch them if necessary.
+	{
+		for (GraphEditConnection& connection : FetchedConnections)
+		{
+			if (connection.Def.bIsParentChildConnection
+			&& connection.Src == &ToBeDeleted
+			&& ToBeDeleted.NodeDef.parentID != connection.Def.nodeID_Dest) // To-Child connection check.
+			{
+				GraphEditNode* childNode = connection.Dest;
+				if (childNode == nullptr)
+				{
+					// Fetch child node.
+					childNode = FetchGraphNode(connection.Def.nodeID_Dest);
+				}
+				DeleteNode(*childNode);
+			}
+		}
+	}
+	
+	// Delete all connections to and from this node as well.
+	{
+		for (GraphEditConnection& connection : FetchedConnections)
+		{
+			// Incoming connection.
+			if (connection.Dest == &ToBeDeleted)
+			{
+				if (connection.Src == nullptr)
+				{
+					// Fetch the source node of this connection so it can be part of the transaction, as it is about to lose a connection !
+					FetchGraphNode(connection.Def.nodeID_Src);
+				}
+				_DeleteConnection(connection);
+			}
+			// Outgoing connection.
+			else if (connection.Src == &ToBeDeleted)
+			{
+				_DeleteConnection(connection);
+			}
+		}
+	}
+
+	// Add Node Delete operation.
+	GraphEditOp_NodeDelete* newNodeDeleteOp = TransactionOperationsMemory.Allocate<GraphEditOp_NodeDelete>();
+	newNodeDeleteOp->type = EditOperationType::NODE_DELETE;
+	newNodeDeleteOp->deletedNode = &ToBeDeleted;
+
+	_AddOperation(*newNodeDeleteOp);
+	return true;
 }
 
-bool ClientGraphEditTransaction::AddOrEditConnection(ClientGraphEditTransaction::Node* SourceNode,
-							ClientGraphEditTransaction::Node* TargetNode, SNodeConnectionDef ConnectionDef)
+bool ClientGraphEditTransaction::AddOrEditConnection(GraphEditNode& SourceNode, GraphEditNode& DestNode, SNodeConnectionDef ConnectionDef)
 {
 	if (TargetGraph == nullptr)
 	{
@@ -262,16 +326,17 @@ bool ClientGraphEditTransaction::AddOrEditConnection(ClientGraphEditTransaction:
 
 	// Find existing connection. If it doesn't already exist, or only implicitly in the case of new parent - child connections, create it.
 
-	Node* connectionPtr = nullptr;
+	GraphEditConnection* connectionPtr = nullptr;
 	bool bIsFetchedConnection = false;
 
 	// Look first among fetched connections as most edit operations will likely target them.
 	size_t fetchedConnectionIndex;
-	for (fetchedConnectionIndex = 0; fetchedConnectionIndex < sizeof(FetchedConnections) / sizeof(Connection); fetchedConnectionIndex++)
+	for (fetchedConnectionIndex = 0; fetchedConnectionIndex < sizeof(FetchedConnections) / sizeof(GraphEditConnection); fetchedConnectionIndex++)
 	{
-		if (FetchedNodes[fetchedConnectionIndex].ID == SNODE_INVALID_ID)
+		if (FetchedConnections[fetchedConnectionIndex].Src == &SourceNode
+		&& FetchedConnections[fetchedConnectionIndex].Dest == &DestNode)
 		{
-			connectionPtr = &FetchedNodes[fetchedConnectionIndex];
+			connectionPtr = &FetchedConnections[fetchedConnectionIndex];
 			bIsFetchedConnection = true;
 			break;
 		}
@@ -281,18 +346,53 @@ bool ClientGraphEditTransaction::AddOrEditConnection(ClientGraphEditTransaction:
 	if (connectionPtr == nullptr)
 	{
 		size_t createdConnectionIndex;
-		for (createdConnectionIndex = 0; createdConnectionIndex < sizeof(CreatedConnections) / sizeof(Connection); createdConnectionIndex++)
+		size_t availableSpot = ~0;
+		for (createdConnectionIndex = 0; createdConnectionIndex < sizeof(CreatedConnections) / sizeof(GraphEditConnection); createdConnectionIndex++)
 		{
-			if (CreatedConnections[createdConnectionIndex].Src == SourceNode)
+			if (CreatedConnections[createdConnectionIndex].Src == &SourceNode
+			&& CreatedConnections[createdConnectionIndex].Dest == &DestNode)
 			{
-				connectionPtr = &CreatedNodes[createdConnectionIndex];
+				connectionPtr = &CreatedConnections[createdConnectionIndex];
 				break;
 			}
+			else if (availableSpot == ~0
+				&& CreatedConnections[createdConnectionIndex].Src == nullptr)
+			{
+				// Cache the available spot in case the connection needs to be created.
+				availableSpot = createdConnectionIndex;
+			}
+		}
+
+		// If it couldn't be found in the Created Connections, then... create it !
+		if (connectionPtr == nullptr)
+		{
+			if (availableSpot == ~0)
+			{
+				// ASSERT No spots are left. Fail the operation.
+				return false;
+			}
+
+			// Initialize basic connection properties.
+			connectionPtr = &CreatedConnections[availableSpot];
+			connectionPtr->Src = &SourceNode;
+			connectionPtr->Dest = &DestNode;
 		}
 	}
+
+	GraphEditConnection& connection = *connectionPtr;
+	connection.Def = ConnectionDef; 
+
+	connection.Def.nodeID_Src = SourceNode.ID;
+	connection.Def.nodeID_Dest = DestNode.ID;
+
+	GraphEditOp_ConnectionNewEdit* newConnectionNewEditOP = TransactionOperationsMemory.Allocate<GraphEditOp_ConnectionNewEdit>();
+	newConnectionNewEditOP->type = EditOperationType::CONNECTION_CREATE_EDIT;
+	newConnectionNewEditOP->editedOrCreatedNode = &connection;
+
+	return true;
 }
 
-bool ClientGraphEditTransaction::DeleteConnection(ClientGraphEditTransaction::Node* SourceNode, ClientGraphEditTransaction::Node* TargetNode)
+bool ClientGraphEditTransaction::DeleteConnection(GraphEditNode& SourceNode, GraphEditNode& DestNode)
 {
 	if (TargetGraph == nullptr)
 	{
@@ -300,25 +400,78 @@ bool ClientGraphEditTransaction::DeleteConnection(ClientGraphEditTransaction::No
 		return false;
 	}
 
-	/*
-		Delete the connection from a source to a target node.
-		Add a corresponding CONNECTION_DELETE operation in the operation collection.
-	*/
+	if (SourceNode.Parent == &DestNode
+	|| DestNode.Parent == &SourceNode)
+	{
+		// ASSERT Cannot delete parent-child connection. Use Node_Edit to change a node's parent.
+		return false;
+	}
+
+	for(GraphEditConnection& connection : FetchedConnections)
+	{
+		if (connection.Src == &SourceNode
+		&& connection.Dest == &DestNode)
+		{
+			return _DeleteConnection(connection);
+		}
+	}
+
+	for(GraphEditConnection& connection : CreatedConnections)
+	{
+		if (connection.Src == &SourceNode
+		&& connection.Dest == &DestNode)
+		{
+			return _DeleteConnection(connection);
+		}
+	}
+
+	// ASSERT The nodes are not connected, or only possess implicit parent-child connections which can not be deleted !
+	return false;
 }
 
-void ClientGraphEditTransaction::AddOperation(GraphEditOp_Base* NewOp)
+bool ClientGraphEditTransaction::_DeleteConnection(GraphEditConnection& Connection)
+{
+	if (TargetGraph == nullptr)
+	{
+		// ASSERT TargetGraph was not assigned.
+		return false;
+	}
+
+	if (Connection.bDeleted)
+	{
+		// ASSERT Connection is already deleted.
+		return false;
+	}
+
+	/*
+		Set the deleted flag of the connection.
+		Add a corresponding CONNECTION_DELETE operation in the operation collection.
+	*/
+
+	Connection.bDeleted = true;
+
+	GraphEditOp_ConnectionDelete* newConnectionDeleteOp = TransactionOperationsMemory.Allocate<GraphEditOp_ConnectionDelete>();
+	newConnectionDeleteOp->type = EditOperationType::CONNECTION_DELETE;
+	newConnectionDeleteOp->deletedConnection = &Connection;
+
+	_AddOperation(*newConnectionDeleteOp);
+
+	return true;
+}
+
+void ClientGraphEditTransaction::_AddOperation(GraphEditOp_Base& NewOp)
 {
 	if (OperationsListBegin == nullptr)
 	{
-		OperationsListBegin = NewOp;
-		OperationsListEnd = NewOp;
+		OperationsListBegin = &NewOp;
+		OperationsListEnd = &NewOp;
 	}
 	else
 	{
 		GraphEditOp_Base* previousEnd = OperationsListEnd;
-		previousEnd->next = NewOp;
-		NewOp->previous = previousEnd;
-		OperationsListEnd = NewOp;
+		previousEnd->next = &NewOp;
+		NewOp.previous = previousEnd;
+		OperationsListEnd = &NewOp;
 	}
 
 	OperationsCount++;
@@ -357,7 +510,7 @@ SNodeDef ClientGraph::GetNodeDef(NodeName Name, SNodeGUID StartNodeID)
 	return {};
 }
 
-size_t ClientGraph::GetNodeConnections(SNodeGUID NodeID, SNodeConnectionDef* NodeConnectionsBuffer, size_t NodeConnectionsBufferSize)
+size_t ClientGraph::GetNodeConnections_Bidirectional(SNodeGUID NodeID, SNodeConnectionDef* NodeConnectionsBuffer, size_t NodeConnectionsBufferSize)
 {
 	// Go through access level matrix, counting connections. If buffer pointer is given, also fill it in with appropriate structured data
 	// until it is full. Keep counting so that the function's user can notice that the given buffer wasn't large enough to hold them all.
@@ -366,6 +519,7 @@ size_t ClientGraph::GetNodeConnections(SNodeGUID NodeID, SNodeConnectionDef* Nod
 	size_t connectionsCount = 0;
 
 	// Matrix stores the access level from one node to all others line-wise.
+	// Retrieve all incoming and outgoing connections.
 	for (SNodeGUID OtherNodeID = 0; OtherNodeID < DataStore.GetMaxNodeCount(); OtherNodeID++)
 	{
 		const SNodeConnectionAccessLevel& accessLevel = DataStore._StaticAccessLevelMatrix[NodeID * DataStore.GetMaxNodeCount() + OtherNodeID];
@@ -379,7 +533,7 @@ size_t ClientGraph::GetNodeConnections(SNodeGUID NodeID, SNodeConnectionDef* Nod
 					accessLevel
 				};
 			}
-			connectionsCount++;
+			connectionsCount += 2;
 		}
 	}
 

@@ -34,6 +34,38 @@ enum class EditOperationType
 	CONNECTION_DELETE
 };
 
+/*
+	"Deployed" version of a node, forming a structured and easy-to-parse graph for edition.
+*/
+struct GraphEditNode
+{
+	SNodeGUID ID = SNODE_INVALID_ID; // Invalid == New node.
+	bool bDeleted = false;
+	bool bFetched = false;
+
+	GraphEditNode* Parent = nullptr;
+	SNodeConnectionAccessLevel AccessLevelToParent = SNodeConnectionAccessLevel::NONE;
+	SNodeConnectionAccessLevel AccessLevelFromParent = SNodeConnectionAccessLevel::NONE;
+
+	// Node Def data from latest new or edit operation affecting this node.
+	SNodeDef NodeDef = {};
+};
+
+/*
+	"Deployed" wrapper around a connection definition, giving direct pointer access to involved Nodes in the transaction if any.
+	By the end of the transaction construction Source HAS to be defined, and Destination unless connection was fetched and contains
+	a valid destination ID.
+*/
+struct GraphEditConnection
+{
+	GraphEditNode* Src = nullptr;
+	GraphEditNode* Dest = nullptr;
+
+	SNodeConnectionDef Def;
+
+	bool bDeleted = false;
+};
+
 // Abtract data structure for an operation in a Client Graph Edit Transaction. Links to next and previous operation if any.
 struct GraphEditOp_Base
 {
@@ -42,19 +74,46 @@ struct GraphEditOp_Base
 	GraphEditOp_Base* next;
 };
 
+// Fetch operation, "loading" an existing node from the Graph datastore into the Transaction.
 struct GraphEditOp_Fetch : public GraphEditOp_Base
 {
-	SNodeGUID fetchedNodeID;
+	// Graph Edit Node created as a result of the operation.
+	GraphEditNode* fetchedGraphNode;
 };
 
-// Data structure specifying the new state of a created or existing node.
+// Node New or Edit operation, setting the core properties of a new or existing node.
 struct GraphEditOp_NodeNewEdit : public GraphEditOp_Base
 {
-	// Definition data for the node after creation or edition.
+	// Definition data for the node after creation or edition at the time of the operation.
 	SNodeDef def;
 
-	// Only relevant for new nodes. Their ID within the Created Nodes collection of the Transaction.
-	SNodeGUID createdNodeIndex;
+	// Graph Edit node created or edited by this operation.
+	GraphEditNode* target;
+
+	// New Parent assigned to the node, if any, at the time of the operation. 
+	GraphEditNode* parent;
+};
+
+// Node Delete operation, deleting an existing node.
+struct GraphEditOp_NodeDelete : public GraphEditOp_Base
+{	
+	GraphEditNode* deletedNode;
+};
+
+// Connection New or Edit operation, setting the core properties of a new or existing connection between two nodes.
+struct GraphEditOp_ConnectionNewEdit : public GraphEditOp_Base
+{
+	// Definition data for the new or edited connection at the time the operation was added.
+	SNodeConnectionDef def;
+
+	// Graph Edit connection created or edited by this operation.
+	GraphEditConnection* editedOrCreatedNode;
+};
+
+// Connection delete operation, deleting an existing connection going from a source node to a destination node.
+struct GraphEditOp_ConnectionDelete : public GraphEditOp_Base
+{
+	GraphEditConnection* deletedConnection;
 };
 
 /*
@@ -64,37 +123,6 @@ struct GraphEditOp_NodeNewEdit : public GraphEditOp_Base
 struct ClientGraphEditTransaction
 {
 	ClientGraph* TargetGraph = nullptr;
-
-	struct Node
-	{
-		SNodeGUID ID = SNODE_INVALID_ID; // Invalid == New node.
-		bool bDeleted = false;
-		bool bFetched = false;
-
-		Node* Parent = nullptr;
-		SNodeConnectionAccessLevel AccessLevelToParent;
-		SNodeConnectionAccessLevel AccessLevelFromParent;
-
-		// Hints for node data to store when transaction is applied. Not all fields may be relevant.
-		SNodeDef NodeDef;
-	};
-
-	/*
-		"Deployed" wrapper around a connection definition, giving direct pointer access to involved Nodes in the transaction if any.
-		By the end of the transaction construction Source HAS to be defined, and Destination unless connection was fetched and contains
-		a valid destination ID.
-	*/
-	struct Connection
-	{
-		Node* Src = nullptr;
-		Node* Dest = nullptr;
-
-		SNodeConnectionAccessLevel AccessLevel;
-
-		SNodeConnectionDef FetchedDef;
-
-		bool bDeleted = false;
-	};
 
 	// Memory the allocator may use for its common o
 	MemoryAllocator TransactionOperationsMemory;
@@ -107,56 +135,66 @@ struct ClientGraphEditTransaction
 	// Total number of generated operations. Used to double-check the validity of the transaction when applying it.
 	size_t OperationsCount = 0;
 
-	Node FetchedNodes[32];
-	Node CreatedNodes[32];
+	GraphEditNode FetchedNodes[32];
+	GraphEditNode CreatedNodes[32];
 
-	Connection FetchedConnections[32 * 32];
-	Connection CreatedConnections[32 * 32];
+	GraphEditConnection FetchedConnections[32 * 32];
+	GraphEditConnection CreatedConnections[32 * 32];
 
 	/*
 		Loads an existing node from the parent graph so it may be involved in the transaction.
 		Returns the fetched node within the transaction, usable to create other nodes or edit it conditionally.
 	*/ 
-	Node* FetchGraphNode(SNodeGUID NodeID);
+	GraphEditNode* FetchGraphNode(SNodeGUID NodeID);
 
 	/*
 		Creates a new node with the passed definition.
 		Def Parent ID not taken into account. Node ID should be defined if editing an existing node.
 		Returns the newly created node within the transaction, usable to create further nodes or edit it conditionally.
 	*/
-	Node* CreateNode(SNodeDef NewNodeDef, Node* Parent);
+	GraphEditNode* CreateNode(SNodeDef NewNodeDef, GraphEditNode* Parent);
 
 	/*
 		Edits a node that was fetched or created earlier in the transaction.
 		Returns whether the operation was successfully added.
 	*/
-	bool EditNode(SNodeDef NewNodeDef, Node* TargetNode, Node* NewParent = nullptr);
+	bool EditNode(GraphEditNode& TargetNode, SNodeDef NewNodeDef, GraphEditNode* NewParent = nullptr,
+					SNodeConnectionAccessLevel AccessToParent = SNodeConnectionAccessLevel::TO_PARENT_MINIMUM,
+					SNodeConnectionAccessLevel AccessFromParent = SNodeConnectionAccessLevel::TO_CHILD_MINIMUM);
 
 	/*
 		Deletes a node from the transaction.
 		If the node was present on the graph before the transaction, will record the node's ID not existing as a post-requisite of the transaction. 
 		Returns whether the operation was successfully added.
 	*/
-	bool DeleteNode(Node* ToBeDeleted);
+	bool DeleteNode(GraphEditNode& ToBeDeleted);
 
 	/*
 		Adds or edits a connection from a source node to a target node based on the passed connection def.
 		Returns whether the operation was successfully added.
 	*/
-	bool AddOrEditConnection(Node* SourceNode, Node* TargetNode, SNodeConnectionDef ConnectionDef);
+	bool AddOrEditConnection(GraphEditNode& SourceNode, GraphEditNode& DestNode, SNodeConnectionDef ConnectionDef);
 
 	/*
-		Deletes the connection from the Source node to the Target node.
+		Deletes the connection from the Source node to the Target node and its symmetrical.
+		Can only delete non-parent-child connections. Use Edit Node operation to change a node's parent.
 		Returns whether the operation was successfully added.
 	*/
-	bool DeleteConnection(Node* SourceNode, Node* TargetNode);
+	bool DeleteConnection(GraphEditNode& SourceNode, GraphEditNode& TargetNode);
+
+	/*
+		Deletes the connection. Make sure to delete its symmetrical as well !
+		Can delete parent-child connections.
+		Returns whether the operation was successfully added.
+	*/
+	bool _DeleteConnection(GraphEditConnection& Connection);
 
 	/*
 		Direct addition of an operation to the operation collection.
 		It is not recommended to do so but rather make use of the other functions available which maintain an internal
 		"deployed" graph that guarantees operational integrity of the transaction.
 	*/
-	void AddOperation(GraphEditOp_Base* NewOp);
+	void _AddOperation(GraphEditOp_Base& NewOp);
 };
 
 /*
@@ -196,8 +234,8 @@ struct ClientGraph
 	*/
 	SNodeDef GetNodeDef(NodeName Name, SNodeGUID StartNodeID = SNODE_INVALID_ID);
 
-	// Returns the connections from the passed Node ID. Returns the total amount of connections.
-	size_t GetNodeConnections(SNodeGUID NodeID, SNodeConnectionDef* NodeConnectionsBuffer, size_t NodeIDBufferSize);
+	// Returns the connections to AND from the passed Node ID. Returns the total amount of connections.
+	size_t GetNodeConnections_Bidirectional(SNodeGUID NodeID, SNodeConnectionDef* NodeConnectionsBuffer, size_t NodeIDBufferSize);
 
 	/*
 		Attempts to apply the passed transaction.

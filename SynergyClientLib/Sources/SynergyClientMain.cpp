@@ -27,6 +27,10 @@ DLL_EXPORT void Hello()
 DLL_EXPORT void StartClient(ClientSessionData& Context)
 {
 	std::cout << "Starting client.\n";
+
+	// Zero out the provided persistent memory.
+	memset(Context.PersistentMemoryBuffer.Memory, 0, Context.PersistentMemoryBuffer.Size);
+
 	ClientSessionState& Client = CastClientState(Context.PersistentMemoryBuffer.Memory);
 
 	// Build Client State Object
@@ -50,20 +54,21 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 
 	// Build a simple graph to test.
 	ClientGraphEditTransaction initTransaction;
+	initTransaction.TargetGraph = Client.Graph;
+	initTransaction.TransactionOperationsMemory = MakeStackAllocator((ByteBuffer)Client.PersistentMemoryAllocator.Allocate(4096), 4096);
 
-	
 	// Root Node
-	ClientGraphEditTransaction::Node* root = initTransaction.CreateNode({ Client.Graph->RootNodeID, SNODE_INVALID_ID, "Root" }, nullptr);
+	GraphEditNode* root = initTransaction.CreateNode({ Client.Graph->RootNodeID, SNODE_INVALID_ID, "Root" }, nullptr);
 
 	// Two direct children
-	ClientGraphEditTransaction::Node* child1 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 1" }, root);
-	ClientGraphEditTransaction::Node* child2 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 2" }, root);
+	GraphEditNode* child1 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 1" }, root);
+	GraphEditNode* child2 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 2" }, root);
 
 	// One grandchild, child of Child 2
-	ClientGraphEditTransaction::Node* child2_1 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Childe 2 - 1" }, child2);
+	GraphEditNode* child2_1 = initTransaction.CreateNode({ SNODE_INVALID_ID, SNODE_INVALID_ID, "Child 2 - 1" }, child2);
 
-	// Monodirectional connection from grandchild to child 1
-	initTransaction.AddOrEditConnection(child2_1, child1, { SNODE_INVALID_ID, SNODE_INVALID_ID, SNodeConnectionAccessLevel::PUBLIC });
+	// Connection from grandchild to child 1.
+	initTransaction.AddOrEditConnection(*child2_1, *child1, { SNODE_INVALID_ID, SNODE_INVALID_ID, SNodeConnectionAccessLevel::PUBLIC });
 
 	if (!Client.Graph->ApplyEditTransaction(initTransaction))
 	{
