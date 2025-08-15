@@ -55,8 +55,7 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 	// Build a simple graph to test.
 	ClientGraphEditTransaction initTransaction;
 	initTransaction.TargetGraph = Client.Graph;
-	initTransaction.TransactionOperationsMemory = MakeStackAllocator((ByteBuffer)Client.PersistentMemoryAllocator.Allocate(4096), 4096);
-
+	
 	// Root Node
 	GraphEditNode* root = initTransaction.CreateNode({ Client.Graph->RootNodeID, SNODE_INVALID_ID, "Root" }, nullptr);
 

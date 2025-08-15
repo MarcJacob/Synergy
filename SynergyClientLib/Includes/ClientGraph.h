@@ -19,20 +19,12 @@ struct NodeCoreData
 {
 	// Display name of the node.
 	NodeName name;
+
+	// ID of parent node.
+	SNodeGUID parentNodeID;
 };
 
 struct ClientGraph;
-
-enum class EditOperationType
-{
-	INVALID,
-	FETCH,
-	NODE_NEW,
-	NODE_EDIT,
-	NODE_DELETE,
-	CONNECTION_CREATE_EDIT,
-	CONNECTION_DELETE
-};
 
 /*
 	"Deployed" version of a node, forming a structured and easy-to-parse graph for edition.
@@ -61,59 +53,9 @@ struct GraphEditConnection
 	GraphEditNode* Src = nullptr;
 	GraphEditNode* Dest = nullptr;
 
-	SNodeConnectionDef Def;
+	SNodeConnectionDef Def = {};
 
 	bool bDeleted = false;
-};
-
-// Abtract data structure for an operation in a Client Graph Edit Transaction. Links to next and previous operation if any.
-struct GraphEditOp_Base
-{
-	EditOperationType type;
-	GraphEditOp_Base* previous;
-	GraphEditOp_Base* next;
-};
-
-// Fetch operation, "loading" an existing node from the Graph datastore into the Transaction.
-struct GraphEditOp_Fetch : public GraphEditOp_Base
-{
-	// Graph Edit Node created as a result of the operation.
-	GraphEditNode* fetchedGraphNode;
-};
-
-// Node New or Edit operation, setting the core properties of a new or existing node.
-struct GraphEditOp_NodeNewEdit : public GraphEditOp_Base
-{
-	// Definition data for the node after creation or edition at the time of the operation.
-	SNodeDef def;
-
-	// Graph Edit node created or edited by this operation.
-	GraphEditNode* target;
-
-	// New Parent assigned to the node, if any, at the time of the operation. 
-	GraphEditNode* parent;
-};
-
-// Node Delete operation, deleting an existing node.
-struct GraphEditOp_NodeDelete : public GraphEditOp_Base
-{	
-	GraphEditNode* deletedNode;
-};
-
-// Connection New or Edit operation, setting the core properties of a new or existing connection between two nodes.
-struct GraphEditOp_ConnectionNewEdit : public GraphEditOp_Base
-{
-	// Definition data for the new or edited connection at the time the operation was added.
-	SNodeConnectionDef def;
-
-	// Graph Edit connection created or edited by this operation.
-	GraphEditConnection* editedOrCreatedNode;
-};
-
-// Connection delete operation, deleting an existing connection going from a source node to a destination node.
-struct GraphEditOp_ConnectionDelete : public GraphEditOp_Base
-{
-	GraphEditConnection* deletedConnection;
 };
 
 /*
@@ -124,18 +66,12 @@ struct ClientGraphEditTransaction
 {
 	ClientGraph* TargetGraph = nullptr;
 
-	// Memory the allocator may use for its common o
-	MemoryAllocator TransactionOperationsMemory;
-
-	// Linked list of generated operations for this transaction.
-	// Every new operation should be allocated from the Operations Memory.
-	GraphEditOp_Base* OperationsListBegin = nullptr;
-	GraphEditOp_Base* OperationsListEnd = nullptr;
-
 	// Total number of generated operations. Used to double-check the validity of the transaction when applying it.
 	size_t OperationsCount = 0;
 
+	// Nodes that were Fetched from existing datastores. Effectively contains which existing nodes are involved in the transaction.
 	GraphEditNode FetchedNodes[32];
+	// Nodes created by this transaction. They need to be assigned an ID before most other steps of applying the transaction.
 	GraphEditNode CreatedNodes[32];
 
 	GraphEditConnection FetchedConnections[32 * 32];
@@ -187,14 +123,7 @@ struct ClientGraphEditTransaction
 		Can delete parent-child connections.
 		Returns whether the operation was successfully added.
 	*/
-	bool _DeleteConnection(GraphEditConnection& Connection);
-
-	/*
-		Direct addition of an operation to the operation collection.
-		It is not recommended to do so but rather make use of the other functions available which maintain an internal
-		"deployed" graph that guarantees operational integrity of the transaction.
-	*/
-	void _AddOperation(GraphEditOp_Base& NewOp);
+	bool DeleteConnection(GraphEditConnection& Connection);
 };
 
 /*

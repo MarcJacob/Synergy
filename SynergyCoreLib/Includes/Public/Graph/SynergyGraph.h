@@ -55,7 +55,7 @@ struct SNodeConnectionDef
 	SNodeGUID nodeID_Src, nodeID_Dest;
 
 	// Access level granted by this connection.
-	SNodeConnectionAccessLevel accessLevel = SNodeConnectionAccessLevel::OPEN;
+	SNodeConnectionAccessLevel accessLevel = SNodeConnectionAccessLevel::NONE;
 
 	// Whether this connection is a Parent-Child connection.
 	bool bIsParentChildConnection = false;
