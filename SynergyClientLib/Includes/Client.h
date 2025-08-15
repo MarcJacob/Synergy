@@ -35,6 +35,9 @@ struct ClientSessionState
 	// State of the Synergy Graph on the client.
 	ClientGraph* Graph;
 
+	// Buffer for displayed node data.
+	NodeRepresentationData NodeRepresentations[64];
+
 	// DEBUG DATA
 	bool bDrawUIDebug = false;
 };

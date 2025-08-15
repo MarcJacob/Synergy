@@ -52,10 +52,10 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 	// Allocate Graph from persistent memory.
 	Client.Graph = Client.PersistentMemoryAllocator.Allocate<ClientGraph>();
 
-	// Build a simple graph to test.
+	// TEST CODE Build a simple graph to test.
 	ClientGraphEditTransaction initTransaction;
 	initTransaction.TargetGraph = Client.Graph;
-	
+
 	// Root Node
 	GraphEditNode* root = initTransaction.CreateNode({ Client.Graph->RootNodeID, SNODE_INVALID_ID, "Root" }, nullptr);
 
@@ -72,6 +72,36 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 	if (!Client.Graph->ApplyEditTransaction(initTransaction))
 	{
 		std::cerr << "Error when applying Init Transaction to Client Graph !\n";
+		return;
+	}
+
+	// TEST CODE Initialize node representation data
+
+	// Let's collect the first 64 nodes, if they exist. Later we'll have ways of tracking which nodes actually exist or not.
+	SNodeDef nodeDefsBuffer[64];
+	size_t nodeCount = 0;
+
+	for (SNodeGUID nodeID = 0; nodeID < 32; nodeID++)
+	{
+		SNodeDef def = Client.Graph->GetNodeDef(nodeID);
+
+		if (def.id == SNODE_INVALID_ID)
+		{	
+			continue;
+		}
+
+		nodeDefsBuffer[nodeCount] = def;
+		nodeCount++;
+	}
+
+	for (SNodeGUID nodeID = 0; nodeID < nodeCount; nodeID++)
+	{
+		// Create representation data.
+		// Place the nodes at random over the view space.
+		Client.NodeRepresentations[nodeID] = {
+			nodeID,
+			Vector2f { (float)(rand() % 200 - 100), float(rand() % 200 - 100) },
+		};
 	}
 }
 

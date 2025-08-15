@@ -428,7 +428,8 @@ SNodeGUID StaticClientGraphDataStore<MaxNodeCount>::FindAvailableID() const
 
 SNodeDef ClientGraph::GetNodeDef(SNodeGUID NodeID, SNodeGUID StartNodeID)
 {
-	if (NodeID > DataStore.GetMaxNodeCount())
+	// If node of this ID doesn't exist, return "hollow" definition.
+	if (NodeID > DataStore.GetMaxNodeCount() || DataStore._StaticNodeCoreDataStore[NodeID].name[0] == '\0')
 	{
 		return {};
 	}

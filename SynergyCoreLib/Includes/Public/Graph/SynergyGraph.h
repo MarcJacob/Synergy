@@ -20,10 +20,10 @@ typedef char NodeName[64];
 struct SNodeDef
 {
 	// Unique identifier for this node within its Tree.
-	SNodeGUID id;
+	SNodeGUID id = SNODE_INVALID_ID;
 
 	// ID of the parent node if any.
-	SNodeGUID parentID;
+	SNodeGUID parentID = SNODE_INVALID_ID;
 
 	// Name of the node.
 	NodeName name;
