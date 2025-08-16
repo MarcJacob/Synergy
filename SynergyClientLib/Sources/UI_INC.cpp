@@ -5,21 +5,21 @@ SOURCE_INC_FILE()
 
 #include "Client.h"
 
-ClientUIPartitionNode *FindNodeAtPosition(ClientUIPartitionTree Tree, Vector2s ViewportPosition)
+UIPartitionNode *FindNodeAtPosition(UIPartitionTree Tree, Vector2s ViewportPosition)
 {
 	// Go down the tree level by level, checking the Viewport Position against the bounding rectangle of each element.
 	// Stop when the hit element has no children or none that are hit.
 
-	ClientUIPartitionNode* hitNode = Tree.RootNode;
+	UIPartitionNode* hitNode = Tree.RootNode;
 	while(hitNode->ChildCount > 0)
 	{
 		// Test every child sequentially until one is hit. At that point, set it as the new hit node and loop.
 		bool bChildHit = false;
 		for(int childIndex = 0; childIndex < hitNode->ChildCount; childIndex++)
 		{
-			ClientUIPartitionNode& child = hitNode->Children[childIndex];
-			Vector2s rectStart = child.RelativePosition;
-			Vector2s rectEnd = child.RelativePosition + child.Dimensions;
+			UIPartitionNode& child = hitNode->Children[childIndex];
+			Vector2s rectStart = child.AbsolutePosition;
+			Vector2s rectEnd = child.AbsolutePosition + child.Dimensions;
 
 			if (ViewportPosition.x >= rectStart.x && ViewportPosition.x <= rectEnd.x
 			&& ViewportPosition.y >= rectStart.y && ViewportPosition.y <= rectEnd.y)
@@ -52,15 +52,15 @@ ClientUIPartitionNode *FindNodeAtPosition(ClientUIPartitionTree Tree, Vector2s V
 */
 void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Frame, const bool bIsPartitionPass)
 {
-	ClientUIPartitionTree& Tree = Frame.MainViewportUITree;
+	UIPartitionTree& Tree = Frame.MainViewportUITree;
 	
 	// Helper function for allocating new nodes from this tree and automatically setting up the parent - child relationships.
-	auto AllocChildren = [&Tree, bIsPartitionPass](ClientUIPartitionNode& Parent, size_t Count = 1)
+	auto AllocChildren = [&Tree, bIsPartitionPass](UIPartitionNode& Parent, size_t Count = 1)
 	{
 		if (!bIsPartitionPass) return; // Do nothing if not in partition pass.
 
 		// ASSERT FATAL IF PARENT ALREADY HAS CHILDREN (Can't grow the children buffer dynamically. If you need a dynamic number of children, determine their count in advance.)
-		Parent.Children = Tree.Memory.Allocate<ClientUIPartitionNode>(Count);
+		Parent.Children = Tree.Memory.Allocate<UIPartitionNode>(Count);
 		Parent.ChildCount = Count;
 		for (size_t childIndex = 0; childIndex < Count; childIndex++)
 		{
@@ -77,11 +77,70 @@ void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Fra
 		if (bIsPartitionPass)
 		{
 			// Create root node as a single viewport-spanning node.
-			Tree.RootNode = Tree.Memory.Allocate<ClientUIPartitionNode>(); 	// Lacking a parent, the helper function can't be used. 
+			Tree.RootNode = Tree.Memory.Allocate<UIPartitionNode>(); 	// Lacking a parent, the helper function can't be used. 
 																			// This probably has some sort of deeper meaning I didn't intend.
 			Tree.RootNode->RelativePosition = {};
 			Tree.RootNode->Dimensions = Client.MainViewport.Dimensions;
 		}
-		ClientUIPartitionNode& root = *Tree.RootNode;
+		UIPartitionNode& root = *Tree.RootNode;
+
+		AllocChildren(root, 3);
+		UIPartitionNode& topPanel = root.Children[0];
+		UIPartitionNode& leftPanel = root.Children[1];
+		UIPartitionNode& graphViewPanel = root.Children[2];
+
+		// TOP PANEL
+		if (bIsPartitionPass)
+		{
+			topPanel.RelativePosition = { }; // Top left corner
+			topPanel.Dimensions = { Client.MainViewport.Dimensions.x, // Entire width
+									(int16_t)(Client.MainViewport.Dimensions.y * 0.2f) // Fifth of height
+			};
+
+			topPanel.PresentationDef = &Client.UINodePresentations.GenericPanel;
+		}
+
+		// LEFT PANEL
+		if (bIsPartitionPass)
+		{
+			leftPanel.RelativePosition = { 0, topPanel.Dimensions.y }; // Top left below top panel
+			leftPanel.Dimensions = { (int16_t)(Client.MainViewport.Dimensions.x * 0.2f), // Fifth of width
+									(int16_t)(Client.MainViewport.Dimensions.y - topPanel.Dimensions.y) // Entire height minus top panel.
+			};
+
+			leftPanel.PresentationDef = &Client.UINodePresentations.GenericPanel;
+		}
+
+		// GRAPH VIEW PANEL
+		if (bIsPartitionPass)
+		{
+			graphViewPanel.RelativePosition = { leftPanel.Dimensions.x, topPanel.Dimensions.y }; // Top left below top panel to the right of left panel.
+			graphViewPanel.Dimensions = { (int16_t)(Client.MainViewport.Dimensions.x - leftPanel.Dimensions.x), // Entire width minus left panel
+										(int16_t)(Client.MainViewport.Dimensions.y - topPanel.Dimensions.y) 
+			}; // Entire height minus top panel
+
+			graphViewPanel.PresentationDef = &Client.UINodePresentations.GraphViewPanel;
+
+			// For each Graph Node Representation available, draw it.
+			size_t nodeCount = 0;
+			for (GraphNodeRepresentationData& nodePresentation : Client.NodeRepresentations)
+			{
+				if (nodePresentation.nodeID == SNODE_INVALID_ID) break; // End of buffer reached.
+
+				nodeCount++;
+			}
+
+			AllocChildren(graphViewPanel, nodeCount);
+			size_t childIndex = 0;
+			for (GraphNodeRepresentationData& nodePresentation : Client.NodeRepresentations)
+			{
+				if (nodePresentation.nodeID == SNODE_INVALID_ID) break; // End of buffer reached.
+				UIPartitionNode& graphNodeUINode = graphViewPanel.Children[childIndex++];
+
+				graphNodeUINode.Dimensions = { 50, 50 };
+				graphNodeUINode.RelativePosition = nodePresentation.viewSpaceLocation - graphNodeUINode.Dimensions / 2;
+				graphNodeUINode.PresentationDef = &Client.UINodePresentations.GraphNode;
+			}
+		}
 	}
 }

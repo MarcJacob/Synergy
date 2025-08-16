@@ -28,6 +28,9 @@ struct ActionInputEvent;
 // Buffer containing all Action Inputs that happened before a frame started, sorted from oldest to newest.
 struct ActionInputEventBuffer;
 
+// Type definition for Frame New Draw Call, requesting the creation of a drawcall in on the platform for the current frame.
+typedef DrawCall* (FrameNewDrawCallFunc)(ViewportID TargetViewportID, DrawCallType Type);
+
 // Data associated with a request to run a single frame of the Client's execution, during which it should 
 // integrate the passage of time, react to inputs and output draw calls and audio samples.
 struct ClientFrameRequestData
@@ -54,7 +57,7 @@ struct ClientFrameRequestData
 	// Requests the allocation of a new draw call for this frame, to be processed by the platform usually at the end of the frame.
 	// If successful returns a pointer to a base DrawCall structure with the correct underlying data type according to the passed type.
 	// If it fails for any reason, returns nullptr.
-	DrawCall* (*NewDrawCall)(ViewportID TargetViewportID, DrawCallType Type);
+	FrameNewDrawCallFunc* NewDrawCall;
 };
 
 // Collection of platform functions that can be called from Client code.

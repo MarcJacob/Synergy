@@ -35,8 +35,17 @@ struct ClientSessionState
 	// State of the Synergy Graph on the client.
 	ClientGraph* Graph;
 
+	// TEST CODE Persistent UI Node Presentation Definitions.
+	// At some point this should become more dynamic.
+	struct
+	{
+		UINodePresentationDef_Rectangle GenericPanel;
+		UINodePresentationDef_Rectangle GraphViewPanel;
+		UINodePresentationDef_Rectangle GraphNode;
+	} UINodePresentations;
+
 	// Buffer for displayed node data.
-	NodeRepresentationData NodeRepresentations[64];
+	GraphNodeRepresentationData NodeRepresentations[64];
 
 	// DEBUG DATA
 	bool bDrawUIDebug = false;
@@ -69,7 +78,7 @@ struct ClientFrameState
 	// Intermediate data generated and used by the frame, for the frame.
 	
 	// UI Partition Tree for drawing the Main Viewport's UI.
-	ClientUIPartitionTree MainViewportUITree;
+	UIPartitionTree MainViewportUITree;
 };
 
 // MAJOR PROCEDURES

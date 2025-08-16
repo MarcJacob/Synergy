@@ -35,22 +35,30 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 
 	// Build Client State Object
 
-	Client = {};
-
 	std::cout << "Allocating Main Viewport.\n";
-	Client.MainViewport.ID = Context.Platform.AllocateViewport("Synergy Client", { 800, 600 });
-	Client.MainViewport.Dimensions = { 800, 600 };
+	Client.MainViewport.Dimensions = { 1920, 1080 };
+	Client.MainViewport.ID = Context.Platform.AllocateViewport("Synergy Client", Client.MainViewport.Dimensions);
 
 	Client.Input = {};
 
 	Client.PersistentMemoryAllocator = MakeStackAllocator(Context.PersistentMemoryBuffer.Memory + sizeof(ClientSessionState)
 		, Context.PersistentMemoryBuffer.Size - sizeof(ClientSessionState));
 
-	// Until we get a proper UI graphics system going, set Debug UI as enabled by default.
-	Client.bDrawUIDebug = true;
+	Client.bDrawUIDebug = false;
 
 	// Allocate Graph from persistent memory.
 	Client.Graph = Client.PersistentMemoryAllocator.Allocate<ClientGraph>();
+
+	// Initialize Graph Node Presentation data.
+	for (SNodeGUID repIndex = 0; repIndex < sizeof(Client.NodeRepresentations) / sizeof(GraphNodeRepresentationData); repIndex++)
+	{
+		Client.NodeRepresentations[repIndex].nodeID = SNODE_INVALID_ID;
+	}
+
+	// TEST CODE Build Node Presentation Definition structures.
+	Client.UINodePresentations.GenericPanel = UINodePresentationDef_Rectangle { GetColorWithIntensity(COLOR_White, 0.2f), false }; // Grey, non-highlightable.
+	Client.UINodePresentations.GraphViewPanel = UINodePresentationDef_Rectangle { COLOR_White, false }; // White, non-highlightable.
+	Client.UINodePresentations.GraphNode = UINodePresentationDef_Rectangle { GetColorWithIntensity(COLOR_Red, 0.5f), true }; // Dark red, highlightable.
 
 	// TEST CODE Build a simple graph to test.
 	ClientGraphEditTransaction initTransaction;
@@ -100,8 +108,10 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 		// Place the nodes at random over the view space.
 		Client.NodeRepresentations[nodeID] = {
 			nodeID,
-			Vector2f { (float)(rand() % 200 - 100), float(rand() % 200 - 100) },
+			Vector2f { (float)(rand() % 400), float(rand() % 400) },
 		};
+
+		Client.NodeRepresentations[nodeID].nodeID = nodeID;
 	}
 }
 
@@ -135,8 +145,7 @@ DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestDat
 	
 	// Construct UI Tree and assign it a memory allocator
 	{
-		ClientUIPartitionTree& tree = frameState.MainViewportUITree;
-
+		UIPartitionTree& tree = frameState.MainViewportUITree;
 		tree = {};
 
 		// Allocate 4kB of memory for the purposes of building the UI tree, from the frame memory.
@@ -146,6 +155,9 @@ DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestDat
 	// Perform Partition Pass
 	BuildFrameUIPartitionTree(clientState, frameState, true); // -> Main Viewport UI Tree ready for collision checks
 	
+	// First Absolute Position pass before Interaction pass.
+	ProcessChildNodesAbsolutePosition_Recursive(*frameState.MainViewportUITree.RootNode);
+
 	// Perform interaction collision checks and determine which nodes, if any, are being interacted with and update their flag consequently.
 
 	// #TEST CODE Just use the mouse cursor. A more complex algorithm can come later, taking into account which viewport the cursor is on and
@@ -153,15 +165,15 @@ DLL_EXPORT void RunClientFrame(ClientSessionData& Context, ClientFrameRequestDat
 
 	if (clientState.Input.CursorViewport != VIEWPORT_ERROR_ID)
 	{
-		ClientUIPartitionNode* InteractedNode = FindNodeAtPosition(frameState.MainViewportUITree, clientState.Input.CursorLocation);
+		UIPartitionNode* InteractedNode = FindNodeAtPosition(frameState.MainViewportUITree, clientState.Input.CursorLocation);
 		InteractedNode->bIsInteracted = true;
 	}
 	
 	// Perform Interaction Pass
 	BuildFrameUIPartitionTree(clientState, frameState, false); // -> Main Viewport UI Tree ready for drawing. Client state mutated.
 
-	// #NOTE (MJ) For now UI does not have a dedicated draw pass, we rely on the debug draw which is performed in OutputDrawCalls.
-	// I have yet to design the system for assigning a "draw type" to UI elements in a flexible way.
+	// Second Absolute Position pass after Interaction pass and before Drawing.
+	ProcessChildNodesAbsolutePosition_Recursive(*frameState.MainViewportUITree.RootNode);
 
 	// Output draw calls for this frame.
 	OutputDrawCalls(clientState, frameState);
