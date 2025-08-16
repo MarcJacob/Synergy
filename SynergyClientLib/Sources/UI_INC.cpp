@@ -112,6 +112,7 @@ void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Fra
 		}
 
 		// GRAPH VIEW PANEL
+		
 		if (bIsPartitionPass)
 		{
 			graphViewPanel.RelativePosition = { leftPanel.Dimensions.x, topPanel.Dimensions.y }; // Top left below top panel to the right of left panel.
@@ -121,8 +122,8 @@ void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Fra
 
 			graphViewPanel.PresentationDef = &Client.UINodePresentations.GraphViewPanel;
 
-			// For each Graph Node Representation available, draw it.
 			size_t nodeCount = 0;
+			// For each Graph Node Representation available, draw it.
 			for (GraphNodeRepresentationData& nodePresentation : Client.NodeRepresentations)
 			{
 				if (nodePresentation.nodeID == SNODE_INVALID_ID) break; // End of buffer reached.
@@ -130,17 +131,33 @@ void BuildFrameUIPartitionTree(ClientSessionState& Client, ClientFrameState& Fra
 				nodeCount++;
 			}
 
+			// Allocate one child node per graph node.
 			AllocChildren(graphViewPanel, nodeCount);
-			size_t childIndex = 0;
-			for (GraphNodeRepresentationData& nodePresentation : Client.NodeRepresentations)
-			{
-				if (nodePresentation.nodeID == SNODE_INVALID_ID) break; // End of buffer reached.
-				UIPartitionNode& graphNodeUINode = graphViewPanel.Children[childIndex++];
+		}
 
+		
+		size_t childIndex = 0;
+
+		// GRAPH NODES
+		for (GraphNodeRepresentationData& nodePresentation : Client.NodeRepresentations)
+		{
+			if (nodePresentation.nodeID == SNODE_INVALID_ID) break; // End of buffer reached.
+			UIPartitionNode& graphNodeUINode = graphViewPanel.Children[childIndex++];
+
+			if (bIsPartitionPass)
+			{
 				graphNodeUINode.Dimensions = { 50, 50 };
 				graphNodeUINode.RelativePosition = nodePresentation.viewSpaceLocation - graphNodeUINode.Dimensions / 2;
-				graphNodeUINode.PresentationDef = &Client.UINodePresentations.GraphNode;
+			}
+
+			graphNodeUINode.PresentationDef = Client.SelectedGraphNodeID == nodePresentation.nodeID ?
+													&Client.UINodePresentations.GraphNode_Selected : &Client.UINodePresentations.GraphNode;
+
+			if (graphNodeUINode.bIsInteracted && Client.Input.ActionKeyStateIs(ActionKey::MOUSE_LEFT, ActionInputState::UP))
+			{
+				Client.SelectedGraphNodeID = nodePresentation.nodeID;
 			}
 		}
+		
 	}
 }

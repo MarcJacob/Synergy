@@ -49,6 +49,8 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 	// Allocate Graph from persistent memory.
 	Client.Graph = Client.PersistentMemoryAllocator.Allocate<ClientGraph>();
 
+	Client.SelectedGraphNodeID = SNODE_INVALID_ID;
+
 	// Initialize Graph Node Presentation data.
 	for (SNodeGUID repIndex = 0; repIndex < sizeof(Client.NodeRepresentations) / sizeof(GraphNodeRepresentationData); repIndex++)
 	{
@@ -59,6 +61,7 @@ DLL_EXPORT void StartClient(ClientSessionData& Context)
 	Client.UINodePresentations.GenericPanel = UINodePresentationDef_Rectangle { GetColorWithIntensity(COLOR_White, 0.2f), false }; // Grey, non-highlightable.
 	Client.UINodePresentations.GraphViewPanel = UINodePresentationDef_Rectangle { COLOR_White, false }; // White, non-highlightable.
 	Client.UINodePresentations.GraphNode = UINodePresentationDef_Rectangle { GetColorWithIntensity(COLOR_Red, 0.5f), true }; // Dark red, highlightable.
+	Client.UINodePresentations.GraphNode_Selected = UINodePresentationDef_Rectangle { COLOR_Blue, false }; // Blue, non-highlightable.
 
 	// TEST CODE Build a simple graph to test.
 	ClientGraphEditTransaction initTransaction;

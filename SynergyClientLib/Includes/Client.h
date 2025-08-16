@@ -30,10 +30,8 @@ struct ClientSessionState
 
 	MemoryAllocator PersistentMemoryAllocator;
 
-	// Backend state data
-
-	// State of the Synergy Graph on the client.
-	ClientGraph* Graph;
+	// Buffer for displayed node data.
+	GraphNodeRepresentationData NodeRepresentations[64];
 
 	// TEST CODE Persistent UI Node Presentation Definitions.
 	// At some point this should become more dynamic.
@@ -42,10 +40,15 @@ struct ClientSessionState
 		UINodePresentationDef_Rectangle GenericPanel;
 		UINodePresentationDef_Rectangle GraphViewPanel;
 		UINodePresentationDef_Rectangle GraphNode;
+		UINodePresentationDef_Rectangle GraphNode_Selected;
 	} UINodePresentations;
 
-	// Buffer for displayed node data.
-	GraphNodeRepresentationData NodeRepresentations[64];
+	// Backend state data
+
+	// State of the Synergy Graph on the client.
+	ClientGraph* Graph;
+
+	SNodeGUID SelectedGraphNodeID;
 
 	// DEBUG DATA
 	bool bDrawUIDebug = false;
